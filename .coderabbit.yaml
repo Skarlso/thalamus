@@ -1,0 +1,27 @@
+language: "en-US"
+
+profile: "assertive"
+tone_instructions: "Be direct and specific. Flag potential issues even if minor. Do not soften feedback unnecessarily."
+
+reviews:
+  auto_review:
+    enabled: true
+    high_level_summary: true
+    drafts: false
+    auto_incremental_review: false
+    ignore_title_keywords:
+      - "renovate"
+      - "bump"
+      - "update"
+    ignore_usernames:
+      - "renovate[bot]"
+      - "dependabot[bot]"
+
+  path_filters:
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!go.sum"
+    - "!**/*.png"
+    - "!**/*.gif"
+    - "!**/*.mov"
+    - "!website/.vitepress/dist/**"
