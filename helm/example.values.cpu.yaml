@@ -15,11 +15,13 @@ thalamus:
       extraArgs:
         - "--max-model-len=512"
         - "--dtype=float32"
-        - "--gpu-memory-utilization=0.50"
+      extraEnv:
+        - name: VLLM_CPU_KVCACHE_SPACE
+          value: "4"
       resources:
         requests:
           cpu: "2"
-          memory: "2Gi"
+          memory: "6Gi"
         limits:
           cpu: "4"
           memory: "6Gi"
