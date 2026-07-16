@@ -8,7 +8,7 @@ Thalamus
 ========
 [![Website](https://img.shields.io/badge/docs-cobaltcore--dev.github.io%2Fthalamus-blue)](https://cobaltcore-dev.github.io/thalamus/)
 [![REUSE status](https://api.reuse.software/badge/github.com/cobaltcore-dev/thalamus)](https://api.reuse.software/info/github.com/cobaltcore-dev/thalamus)
-<a href="https://github.com/cobaltcore-dev/thalamus"><img align="left" width="150" height="170" src="https://raw.githubusercontent.com/cobaltcore-dev/thalamus/main/docs/assets/logo/Thalamus_Logo_black.svg"></a>
+<a href="https://github.com/cobaltcore-dev/thalamus"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cobaltcore-dev/thalamus/main/docs/assets/logo/Thalamus_Logo_white.svg"><img align="left" width="150" height="170" src="https://raw.githubusercontent.com/cobaltcore-dev/thalamus/main/docs/assets/logo/Thalamus_Logo_black.svg"></picture></a>
 
 Thalamus is a vendor-neutral, Kubernetes-native inference service for sovereign LLM deployments. Weights, prompts, and context are protected and stay in the deployment perimeter.
 
