@@ -8,7 +8,7 @@ hero:
     A vendor-neutral, Kubernetes-native inference service based on llm-d,
     the Gateway API inference extension, and Cortex.
   image:
-    src: https://raw.githubusercontent.com/cobaltcore-dev/.github/main/assets/Logo_Cobalt_Core_Typo_white_background.svg
+    src: https://raw.githubusercontent.com/cobaltcore-dev/thalamus/main/docs/assets/logo/Thalamus_Logo_black.svg
     alt: CobaltCore
   actions:
     - theme: brand
