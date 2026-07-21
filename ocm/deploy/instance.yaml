@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: Copyright 2026 SAP SE or an SAP affiliate company and cobaltcore-dev contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Sample per-cluster instance. Fields override the defaults declared in
+# the RGD schema (ocm/deploy/rgd.yaml).
+apiVersion: kro.run/v1alpha1
+kind: Thalamus
+metadata:
+  name: thalamus
+  namespace: thalamus
+spec:
+  version: "0.1.0"
+  repository:
+    baseUrl: http://registry:5000
+    type: OCIRegistry
+  insecureRegistry: true
+  externalDns:
+    enabled: false
+  openWebui:
+    enabled: true
