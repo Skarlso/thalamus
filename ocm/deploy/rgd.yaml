@@ -2,16 +2,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# Root orchestrator. Instantiates the child RGD kinds (RGD chaining) and
+# waits for their readiness. It does not override anything inside the
+# children; it only forwards the repository configuration and models the
+# install ordering from the helmfile via dependency annotations.
 apiVersion: kro.run/v1alpha1
 kind: ResourceGraphDefinition
 metadata:
-  name: thalamus
+  name: thalamus-root
 spec:
   schema:
     apiVersion: v1alpha1
     kind: Thalamus
+    scope: Namespaced
     spec:
-      version: string | default="0.1.0"
       prefix: string | default="thalamus"
       repository: object
       insecureRegistry: boolean | default=false
@@ -27,12 +31,10 @@ spec:
         enabled: boolean | default=false
       openWebui:
         enabled: boolean | default=true
-        openaiBaseApiUrl: string | default="http://inference-gateway.thalamus.svc.cluster.local/v1"
+    status:
+      ready: ${thalamusCore.status.ready}
 
   resources:
-    # ==========================================================
-    # Bootstrap (self managed) configuration
-    # ==========================================================
     - id: thalamusNamespace
       template:
         apiVersion: v1
@@ -40,877 +42,169 @@ spec:
         metadata:
           name: thalamus
 
-    - id: repository
+    - id: gatewayApiCrds
       readyWhen:
-        - ${repository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${gatewayApiCrds.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Repository
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusGatewayApiCrds
         metadata:
-          name: ${schema.spec.prefix}-repository
+          name: ${schema.spec.prefix}-gateway-api-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
-          repositorySpec: ${schema.spec.repository}
-          interval: 10m
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: thalamusComponent
+    - id: gatewayApiInfExtCrds
       readyWhen:
-        - ${thalamusComponent.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${gatewayApiInfExtCrds.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Component
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusGatewayApiInferenceExtensionCrds
         metadata:
-          name: ${schema.spec.prefix}-component
+          name: ${schema.spec.prefix}-gateway-api-inference-extension-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
-          component: github.com/cobaltcore-dev/thalamus
-          repositoryRef:
-            name: ${repository.metadata.name}
-          semver: ${schema.spec.version}
-          interval: 1m
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: rgdResource
-      readyWhen:
-        - ${rgdResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
-        metadata:
-          name: ${schema.spec.prefix}-resource-rgd
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              resource:
-                name: thalamus-rgd
-
-    - id: rgdDeployer
-      readyWhen:
-        - ${rgdDeployer.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Deployer
-        metadata:
-          name: ${schema.spec.prefix}-deployer
-        spec:
-          resourceRef:
-            name: ${rgdResource.metadata.name}
-            namespace: ${thalamusNamespace.metadata.name}
-
-    # ==========================================================
-    # Namespaces
-    # ==========================================================
-    - id: nfdNamespace
-      includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
-      template:
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: node-feature-discovery
-
-    - id: gpuOperatorNamespace
-      includeWhen:
-        - ${schema.spec.gpuOperator.enabled}
-      template:
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: gpu-operator
-
-    - id: monitoringNamespace
-      includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
-      template:
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: monitoring
-
-    - id: agentgatewayNamespace
-      includeWhen:
-        - ${schema.spec.agentgateway.enabled}
-      template:
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: agentgateway-system
-
-    - id: externalDnsNamespace
-      includeWhen:
-        - ${schema.spec.externalDns.enabled}
-      template:
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: external-dns
-
-    - id: openWebuiNamespace
-      includeWhen:
-        - ${schema.spec.openWebui.enabled}
-      template:
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: open-webui
-
-    # ==========================================================
-    # gateway-api-crds
-    # ==========================================================
-    - id: gatewayApiCrdsChartResource
-      readyWhen:
-        - ${gatewayApiCrdsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
-        metadata:
-          name: ${schema.spec.prefix}-resource-gateway-api-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: gateway-api-crds
-              resource:
-                name: gateway-api-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
-
-    - id: gatewayApiCrdsOciRepository
-      readyWhen:
-        - ${gatewayApiCrdsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-gateway-api-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${gatewayApiCrdsChartResource.status.additional.oci.registry}/${gatewayApiCrdsChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${gatewayApiCrdsChartResource.status.additional.oci.digest}
-
-    - id: gatewayApiCrdsHelmRelease
-      readyWhen:
-        - ${gatewayApiCrdsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: gateway-api-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: gateway-api-crds
-          targetNamespace: default
-          interval: 1m
-          timeout: 5m
-          chartRef:
-            kind: OCIRepository
-            name: ${gatewayApiCrdsOciRepository.metadata.name}
-
-    # ==========================================================
-    # gateway-api-inference-extension-crds
-    # ==========================================================
-    - id: gatewayApiInfExtCrdsChartResource
-      readyWhen:
-        - ${gatewayApiInfExtCrdsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
-        metadata:
-          name: ${schema.spec.prefix}-resource-gateway-api-inference-extension-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: gateway-api-inference-extension-crds
-              resource:
-                name: gateway-api-inference-extension-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
-
-    - id: gatewayApiInfExtCrdsOciRepository
-      readyWhen:
-        - ${gatewayApiInfExtCrdsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-gateway-api-inference-extension-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${gatewayApiInfExtCrdsChartResource.status.additional.oci.registry}/${gatewayApiInfExtCrdsChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${gatewayApiInfExtCrdsChartResource.status.additional.oci.digest}
-
-    - id: gatewayApiInfExtCrdsHelmRelease
-      readyWhen:
-        - ${gatewayApiInfExtCrdsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: gateway-api-inference-extension-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: gateway-api-inference-extension-crds
-          targetNamespace: default
-          interval: 1m
-          timeout: 5m
-          chartRef:
-            kind: OCIRepository
-            name: ${gatewayApiInfExtCrdsOciRepository.metadata.name}
-
-    # ==========================================================
-    # node-feature-discovery
-    # ==========================================================
-    - id: nfdChartResource
+    - id: nodeFeatureDiscovery
       includeWhen:
         - ${schema.spec.nodeFeatureDiscovery.enabled}
       readyWhen:
-        - ${nfdChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${nodeFeatureDiscovery.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusNodeFeatureDiscovery
         metadata:
-          name: ${schema.spec.prefix}-resource-node-feature-discovery
+          name: ${schema.spec.prefix}-node-feature-discovery
           namespace: ${thalamusNamespace.metadata.name}
         spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: node-feature-discovery
-              resource:
-                name: node-feature-discovery-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: nfdOciRepository
-      includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
-      readyWhen:
-        - ${nfdOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-node-feature-discovery
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${nfdChartResource.status.additional.oci.registry}/${nfdChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${nfdChartResource.status.additional.oci.digest}
-
-    - id: nfdHelmRelease
-      includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
-      readyWhen:
-        - ${nfdHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: node-feature-discovery
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: node-feature-discovery
-          targetNamespace: ${nfdNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          chartRef:
-            kind: OCIRepository
-            name: ${nfdOciRepository.metadata.name}
-
-    # ==========================================================
-    # gpu-operator
-    # ==========================================================
-    - id: gpuOperatorChartResource
+    - id: gpuOperator
       includeWhen:
         - ${schema.spec.gpuOperator.enabled}
       readyWhen:
-        - ${gpuOperatorChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${gpuOperator.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusGpuOperator
         metadata:
-          name: ${schema.spec.prefix}-resource-gpu-operator
+          name: ${schema.spec.prefix}-gpu-operator
           namespace: ${thalamusNamespace.metadata.name}
+          annotations:
+            thalamus.cobaltcore.dev/after: ${nodeFeatureDiscovery.metadata.name}
         spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: gpu-operator
-              resource:
-                name: gpu-operator-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: gpuOperatorOciRepository
-      includeWhen:
-        - ${schema.spec.gpuOperator.enabled}
-      readyWhen:
-        - ${gpuOperatorOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-gpu-operator
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${gpuOperatorChartResource.status.additional.oci.registry}/${gpuOperatorChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${gpuOperatorChartResource.status.additional.oci.digest}
-
-    - id: gpuOperatorHelmRelease
-      includeWhen:
-        - ${schema.spec.gpuOperator.enabled}
-      readyWhen:
-        - ${gpuOperatorHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: gpu-operator
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: gpu-operator
-          targetNamespace: ${gpuOperatorNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          dependsOn:
-            - name: ${nfdHelmRelease.metadata.name}
-          chartRef:
-            kind: OCIRepository
-            name: ${gpuOperatorOciRepository.metadata.name}
-          values:
-            nfd:
-              enabled: false
-
-    # ==========================================================
-    # kube-prometheus-stack
-    # ==========================================================
-    - id: kpsChartResource
+    - id: kubePrometheusStack
       includeWhen:
         - ${schema.spec.kubePrometheusStack.enabled}
       readyWhen:
-        - ${kpsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${kubePrometheusStack.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusKubePrometheusStack
         metadata:
-          name: ${schema.spec.prefix}-resource-kube-prometheus-stack
+          name: ${schema.spec.prefix}-kube-prometheus-stack
           namespace: ${thalamusNamespace.metadata.name}
         spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: kube-prometheus-stack
-              resource:
-                name: kube-prometheus-stack-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: kpsOciRepository
-      includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
-      readyWhen:
-        - ${kpsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-kube-prometheus-stack
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${kpsChartResource.status.additional.oci.registry}/${kpsChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${kpsChartResource.status.additional.oci.digest}
-
-    - id: kpsHelmRelease
-      includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
-      readyWhen:
-        - ${kpsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: kube-prometheus-stack
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: kube-prometheus-stack
-          targetNamespace: ${monitoringNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          chartRef:
-            kind: OCIRepository
-            name: ${kpsOciRepository.metadata.name}
-          values:
-            nodeExporter:
-              enabled: false
-            grafana:
-              enabled: false
-
-    # ==========================================================
-    # agentgateway-crds
-    # ==========================================================
-    - id: agentgatewayCrdsChartResource
+    - id: agentgatewayCrds
       includeWhen:
         - ${schema.spec.agentgateway.enabled}
       readyWhen:
-        - ${agentgatewayCrdsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${agentgatewayCrds.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusAgentgatewayCrds
         metadata:
-          name: ${schema.spec.prefix}-resource-agentgateway-crds
+          name: ${schema.spec.prefix}-agentgateway-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: agentgateway-crds
-              resource:
-                name: agentgateway-crds-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: agentgatewayCrdsOciRepository
+    - id: agentgateway
       includeWhen:
         - ${schema.spec.agentgateway.enabled}
       readyWhen:
-        - ${agentgatewayCrdsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${agentgateway.status.ready}
       template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusAgentgateway
         metadata:
-          name: ${schema.spec.prefix}-oci-agentgateway-crds
+          name: ${schema.spec.prefix}-agentgateway
           namespace: ${thalamusNamespace.metadata.name}
+          annotations:
+            thalamus.cobaltcore.dev/after: ${gatewayApiCrds.metadata.name},${gatewayApiInfExtCrds.metadata.name},${agentgatewayCrds.metadata.name}
         spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${agentgatewayCrdsChartResource.status.additional.oci.registry}/${agentgatewayCrdsChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${agentgatewayCrdsChartResource.status.additional.oci.digest}
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: agentgatewayCrdsHelmRelease
-      includeWhen:
-        - ${schema.spec.agentgateway.enabled}
-      readyWhen:
-        - ${agentgatewayCrdsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: agentgateway-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: agentgateway-crds
-          targetNamespace: ${agentgatewayNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          chartRef:
-            kind: OCIRepository
-            name: ${agentgatewayCrdsOciRepository.metadata.name}
-
-    # ==========================================================
-    # agentgateway
-    # ==========================================================
-    - id: agentgatewayChartResource
-      includeWhen:
-        - ${schema.spec.agentgateway.enabled}
-      readyWhen:
-        - ${agentgatewayChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
-        metadata:
-          name: ${schema.spec.prefix}-resource-agentgateway
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: agentgateway
-              resource:
-                name: agentgateway-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
-
-    - id: agentgatewayOciRepository
-      includeWhen:
-        - ${schema.spec.agentgateway.enabled}
-      readyWhen:
-        - ${agentgatewayOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-agentgateway
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${agentgatewayChartResource.status.additional.oci.registry}/${agentgatewayChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${agentgatewayChartResource.status.additional.oci.digest}
-
-    - id: agentgatewayHelmRelease
-      includeWhen:
-        - ${schema.spec.agentgateway.enabled}
-      readyWhen:
-        - ${agentgatewayHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: agentgateway
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: agentgateway
-          targetNamespace: ${agentgatewayNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          dependsOn:
-            - name: ${gatewayApiCrdsHelmRelease.metadata.name}
-            - name: ${gatewayApiInfExtCrdsHelmRelease.metadata.name}
-            - name: ${agentgatewayCrdsHelmRelease.metadata.name}
-          chartRef:
-            kind: OCIRepository
-            name: ${agentgatewayOciRepository.metadata.name}
-          values:
-            inferenceExtension:
-              enabled: true
-
-    # ==========================================================
-    # external-dns
-    # ==========================================================
-    - id: externalDnsChartResource
+    - id: externalDns
       includeWhen:
         - ${schema.spec.externalDns.enabled}
       readyWhen:
-        - ${externalDnsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${externalDns.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusExternalDns
         metadata:
-          name: ${schema.spec.prefix}-resource-external-dns
+          name: ${schema.spec.prefix}-external-dns
           namespace: ${thalamusNamespace.metadata.name}
+          annotations:
+            thalamus.cobaltcore.dev/after: ${gatewayApiCrds.metadata.name}
         spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: external-dns
-              resource:
-                name: external-dns-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: externalDnsOciRepository
-      includeWhen:
-        - ${schema.spec.externalDns.enabled}
+    - id: thalamusCrds
       readyWhen:
-        - ${externalDnsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${thalamusCrds.status.ready}
       template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusCrds
         metadata:
-          name: ${schema.spec.prefix}-oci-external-dns
+          name: ${schema.spec.prefix}-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${externalDnsChartResource.status.additional.oci.registry}/${externalDnsChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${externalDnsChartResource.status.additional.oci.digest}
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    - id: externalDnsHelmRelease
-      includeWhen:
-        - ${schema.spec.externalDns.enabled}
+    - id: thalamusCore
       readyWhen:
-        - ${externalDnsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${thalamusCore.status.ready}
       template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusCore
         metadata:
-          name: external-dns
+          name: ${schema.spec.prefix}-core
           namespace: ${thalamusNamespace.metadata.name}
+          annotations:
+            thalamus.cobaltcore.dev/after: ${thalamusCrds.metadata.name},${agentgateway.metadata.name}
         spec:
-          releaseName: external-dns
-          targetNamespace: ${externalDnsNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          dependsOn:
-            - name: ${gatewayApiCrdsHelmRelease.metadata.name}
-          chartRef:
-            kind: OCIRepository
-            name: ${externalDnsOciRepository.metadata.name}
-          values:
-            sources:
-              - gateway-httproute
-              - gateway-grpcroute
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
 
-    # ==========================================================
-    # thalamus-crds
-    # ==========================================================
-    - id: thalamusCrdsChartResource
-      readyWhen:
-        - ${thalamusCrdsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
-        metadata:
-          name: ${schema.spec.prefix}-resource-thalamus-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: thalamus-crds
-              resource:
-                name: thalamus-crds-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
-
-    - id: thalamusCrdsOciRepository
-      readyWhen:
-        - ${thalamusCrdsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-thalamus-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${thalamusCrdsChartResource.status.additional.oci.registry}/${thalamusCrdsChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${thalamusCrdsChartResource.status.additional.oci.digest}
-
-    - id: thalamusCrdsHelmRelease
-      readyWhen:
-        - ${thalamusCrdsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: thalamus-crds
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: thalamus-crds
-          targetNamespace: ${thalamusNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          chartRef:
-            kind: OCIRepository
-            name: ${thalamusCrdsOciRepository.metadata.name}
-
-    # ==========================================================
-    # thalamus
-    # ==========================================================
-    - id: thalamusChartResource
-      readyWhen:
-        - ${thalamusChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
-        metadata:
-          name: ${schema.spec.prefix}-resource-thalamus-chart
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              resource:
-                name: thalamus-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
-
-    - id: thalamusOciRepository
-      readyWhen:
-        - ${thalamusOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-thalamus-chart
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${thalamusChartResource.status.additional.oci.registry}/${thalamusChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${thalamusChartResource.status.additional.oci.digest}
-
-    - id: thalamusHelmRelease
-      readyWhen:
-        - ${thalamusHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: thalamus
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: thalamus
-          targetNamespace: ${thalamusNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          dependsOn:
-            - name: ${thalamusCrdsHelmRelease.metadata.name}
-            - name: ${agentgatewayHelmRelease.metadata.name}
-          chartRef:
-            kind: OCIRepository
-            name: ${thalamusOciRepository.metadata.name}
-
-    # ==========================================================
-    # open-webui
-    # ==========================================================
-    - id: openWebuiChartResource
+    - id: openWebui
       includeWhen:
         - ${schema.spec.openWebui.enabled}
       readyWhen:
-        - ${openWebuiChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+        - ${openWebui.status.ready}
       template:
-        apiVersion: delivery.ocm.software/v1alpha1
-        kind: Resource
+        apiVersion: kro.run/v1alpha1
+        kind: ThalamusOpenWebui
         metadata:
-          name: ${schema.spec.prefix}-resource-open-webui
+          name: ${schema.spec.prefix}-open-webui
           namespace: ${thalamusNamespace.metadata.name}
+          annotations:
+            thalamus.cobaltcore.dev/after: ${thalamusCore.metadata.name}
         spec:
-          componentRef:
-            name: ${thalamusComponent.metadata.name}
-          resource:
-            byReference:
-              referencePath:
-                - name: open-webui
-              resource:
-                name: open-webui-chart
-          additionalStatusFields:
-            oci: resource.access.toOCI()
-
-    - id: openWebuiOciRepository
-      includeWhen:
-        - ${schema.spec.openWebui.enabled}
-      readyWhen:
-        - ${openWebuiOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: OCIRepository
-        metadata:
-          name: ${schema.spec.prefix}-oci-open-webui
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
-          layerSelector:
-            mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-            operation: copy
-          url: oci://${openWebuiChartResource.status.additional.oci.registry}/${openWebuiChartResource.status.additional.oci.repository}
-          ref:
-            digest: ${openWebuiChartResource.status.additional.oci.digest}
-
-    - id: openWebuiHelmRelease
-      includeWhen:
-        - ${schema.spec.openWebui.enabled}
-      readyWhen:
-        - ${openWebuiHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
-      template:
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: open-webui
-          namespace: ${thalamusNamespace.metadata.name}
-        spec:
-          releaseName: open-webui
-          targetNamespace: ${openWebuiNamespace.metadata.name}
-          interval: 1m
-          timeout: 5m
-          dependsOn:
-            - name: ${thalamusHelmRelease.metadata.name}
-          chartRef:
-            kind: OCIRepository
-            name: ${openWebuiOciRepository.metadata.name}
-          values:
-            ollama:
-              enabled: false
-            pipelines:
-              enabled: false
-            tika:
-              enabled: false
-            terminals:
-              enabled: false
-            extraEnvVars:
-              - name: WEBUI_AUTH
-                value: "False"
-            service:
-              type: ClusterIP
-            openaiBaseApiUrl: ${schema.spec.openWebui.openaiBaseApiUrl}
-            route:
-              enabled: true
-              parentRefs:
-                - name: inference-gateway
-                  namespace: thalamus
+          repository: ${schema.spec.repository}
+          insecureRegistry: ${schema.spec.insecureRegistry}
