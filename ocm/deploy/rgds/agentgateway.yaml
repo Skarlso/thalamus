@@ -68,6 +68,44 @@ spec:
           additionalStatusFields:
             oci: resource.access.toOCI()
 
+    - id: controllerImage
+      readyWhen:
+        - ${controllerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-controller
+          namespace: ${schema.spec.namespace}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: controller-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: proxyImage
+      readyWhen:
+        - ${proxyImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-proxy
+          namespace: ${schema.spec.namespace}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: proxy-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
     - id: ociRepository
       readyWhen:
         - ${ociRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
@@ -107,3 +145,13 @@ spec:
           values:
             inferenceExtension:
               enabled: true
+            controller:
+              image:
+                registry: ${controllerImage.status.additional.oci.registry}
+                repository: ${controllerImage.status.additional.oci.repository}
+                tag: v1.3.1@${controllerImage.status.additional.oci.digest}
+            proxy:
+              image:
+                registry: ${proxyImage.status.additional.oci.registry}
+                repository: ${proxyImage.status.additional.oci.repository}
+                tag: v1.3.1@${proxyImage.status.additional.oci.digest}

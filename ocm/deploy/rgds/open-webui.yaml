@@ -76,6 +76,44 @@ spec:
           additionalStatusFields:
             oci: resource.access.toOCI()
 
+    - id: openWebuiImage
+      readyWhen:
+        - ${openWebuiImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-open-webui
+          namespace: ${myNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: open-webui-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: redisImage
+      readyWhen:
+        - ${redisImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-redis
+          namespace: ${myNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: redis-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
     - id: ociRepository
       readyWhen:
         - ${ociRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
@@ -113,6 +151,14 @@ spec:
             kind: OCIRepository
             name: ${ociRepository.metadata.name}
           values:
+            image:
+              repository: ${openWebuiImage.status.additional.oci.registry}/${openWebuiImage.status.additional.oci.repository}
+              tag: 0.10.2@${openWebuiImage.status.additional.oci.digest}
+            websocket:
+              redis:
+                image:
+                  repository: ${redisImage.status.additional.oci.registry}/${redisImage.status.additional.oci.repository}
+                  tag: 7.4.2-alpine3.21@${redisImage.status.additional.oci.digest}
             ollama:
               enabled: false
             pipelines:

@@ -68,6 +68,82 @@ spec:
           additionalStatusFields:
             oci: resource.access.toOCI()
 
+    - id: operatorImage
+      readyWhen:
+        - ${operatorImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-operator
+          namespace: ${schema.spec.namespace}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: operator-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: vllmImage
+      readyWhen:
+        - ${vllmImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-vllm-openai
+          namespace: ${schema.spec.namespace}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: vllm-openai-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: vllmCpuImage
+      readyWhen:
+        - ${vllmCpuImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-vllm-openai-cpu
+          namespace: ${schema.spec.namespace}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: vllm-openai-cpu-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: eppImage
+      readyWhen:
+        - ${eppImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-epp
+          namespace: ${schema.spec.namespace}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: epp-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
     - id: ociRepository
       readyWhen:
         - ${ociRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
@@ -104,3 +180,25 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${ociRepository.metadata.name}
+          values:
+            operator:
+              image:
+                registry: ${operatorImage.status.additional.oci.registry}
+                repository: ${operatorImage.status.additional.oci.repository}
+                digest: ${operatorImage.status.additional.oci.digest}
+            accelerators:
+              nvidia:
+                image:
+                  registry: ${vllmImage.status.additional.oci.registry}
+                  repository: ${vllmImage.status.additional.oci.repository}
+                  digest: ${vllmImage.status.additional.oci.digest}
+              cpu:
+                image:
+                  registry: ${vllmCpuImage.status.additional.oci.registry}
+                  repository: ${vllmCpuImage.status.additional.oci.repository}
+                  digest: ${vllmCpuImage.status.additional.oci.digest}
+            epp:
+              image:
+                registry: ${eppImage.status.additional.oci.registry}
+                repository: ${eppImage.status.additional.oci.repository}
+                digest: ${eppImage.status.additional.oci.digest}

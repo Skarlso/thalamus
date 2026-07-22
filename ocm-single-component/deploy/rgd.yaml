@@ -308,6 +308,29 @@ spec:
           additionalStatusFields:
             oci: resource.access.toOCI()
 
+    - id: nfdImage
+      includeWhen:
+        - ${schema.spec.nodeFeatureDiscovery.enabled}
+      readyWhen:
+        - ${nfdImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-node-feature-discovery
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: node-feature-discovery
+              resource:
+                name: node-feature-discovery-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
     - id: nfdOciRepository
       includeWhen:
         - ${schema.spec.nodeFeatureDiscovery.enabled}
@@ -348,6 +371,10 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${nfdOciRepository.metadata.name}
+          values:
+            image:
+              repository: ${nfdImage.status.additional.oci.registry}/${nfdImage.status.additional.oci.repository}
+              tag: v0.19.0@${nfdImage.status.additional.oci.digest}
 
     # ==========================================================
     # gpu-operator
@@ -372,6 +399,167 @@ spec:
                 - name: gpu-operator
               resource:
                 name: gpu-operator-chart
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: gpuOperatorImage
+      includeWhen:
+        - ${schema.spec.gpuOperator.enabled}
+      readyWhen:
+        - ${gpuOperatorImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-gpu-operator
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: gpu-operator
+              resource:
+                name: gpu-operator-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: gpuOperatorDriverManagerImage
+      includeWhen:
+        - ${schema.spec.gpuOperator.enabled}
+      readyWhen:
+        - ${gpuOperatorDriverManagerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-driver-manager
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: gpu-operator
+              resource:
+                name: driver-manager-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: gpuOperatorToolkitImage
+      includeWhen:
+        - ${schema.spec.gpuOperator.enabled}
+      readyWhen:
+        - ${gpuOperatorToolkitImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-container-toolkit
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: gpu-operator
+              resource:
+                name: container-toolkit-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: gpuOperatorDevicePluginImage
+      includeWhen:
+        - ${schema.spec.gpuOperator.enabled}
+      readyWhen:
+        - ${gpuOperatorDevicePluginImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-device-plugin
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: gpu-operator
+              resource:
+                name: device-plugin-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: gpuOperatorDcgmExporterImage
+      includeWhen:
+        - ${schema.spec.gpuOperator.enabled}
+      readyWhen:
+        - ${gpuOperatorDcgmExporterImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-dcgm-exporter
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: gpu-operator
+              resource:
+                name: dcgm-exporter-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: gpuOperatorMigManagerImage
+      includeWhen:
+        - ${schema.spec.gpuOperator.enabled}
+      readyWhen:
+        - ${gpuOperatorMigManagerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-mig-manager
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: gpu-operator
+              resource:
+                name: mig-manager-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: gpuOperatorCcManagerImage
+      includeWhen:
+        - ${schema.spec.gpuOperator.enabled}
+      readyWhen:
+        - ${gpuOperatorCcManagerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-cc-manager
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: gpu-operator
+              resource:
+                name: cc-manager-image
           additionalStatusFields:
             oci: resource.access.toOCI()
 
@@ -420,6 +608,43 @@ spec:
           values:
             nfd:
               enabled: false
+            operator:
+              repository: ${gpuOperatorImage.status.additional.oci.registry}
+              image: ${gpuOperatorImage.status.additional.oci.repository}
+              version: v26.3.3@${gpuOperatorImage.status.additional.oci.digest}
+            validator:
+              repository: ${gpuOperatorImage.status.additional.oci.registry}
+              image: ${gpuOperatorImage.status.additional.oci.repository}
+              version: ${gpuOperatorImage.status.additional.oci.digest}
+            driver:
+              manager:
+                repository: ${gpuOperatorDriverManagerImage.status.additional.oci.registry}
+                image: ${gpuOperatorDriverManagerImage.status.additional.oci.repository}
+                version: v0.11.0@${gpuOperatorDriverManagerImage.status.additional.oci.digest}
+            toolkit:
+              repository: ${gpuOperatorToolkitImage.status.additional.oci.registry}
+              image: ${gpuOperatorToolkitImage.status.additional.oci.repository}
+              version: ${gpuOperatorToolkitImage.status.additional.oci.digest}
+            devicePlugin:
+              repository: ${gpuOperatorDevicePluginImage.status.additional.oci.registry}
+              image: ${gpuOperatorDevicePluginImage.status.additional.oci.repository}
+              version: ${gpuOperatorDevicePluginImage.status.additional.oci.digest}
+            gfd:
+              repository: ${gpuOperatorDevicePluginImage.status.additional.oci.registry}
+              image: ${gpuOperatorDevicePluginImage.status.additional.oci.repository}
+              version: ${gpuOperatorDevicePluginImage.status.additional.oci.digest}
+            dcgmExporter:
+              repository: ${gpuOperatorDcgmExporterImage.status.additional.oci.registry}
+              image: ${gpuOperatorDcgmExporterImage.status.additional.oci.repository}
+              version: ${gpuOperatorDcgmExporterImage.status.additional.oci.digest}
+            migManager:
+              repository: ${gpuOperatorMigManagerImage.status.additional.oci.registry}
+              image: ${gpuOperatorMigManagerImage.status.additional.oci.repository}
+              version: ${gpuOperatorMigManagerImage.status.additional.oci.digest}
+            ccManager:
+              repository: ${gpuOperatorCcManagerImage.status.additional.oci.registry}
+              image: ${gpuOperatorCcManagerImage.status.additional.oci.repository}
+              version: ${gpuOperatorCcManagerImage.status.additional.oci.digest}
 
     # ==========================================================
     # kube-prometheus-stack
@@ -444,6 +669,167 @@ spec:
                 - name: kube-prometheus-stack
               resource:
                 name: kube-prometheus-stack-chart
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: kpsPrometheusOperatorImage
+      includeWhen:
+        - ${schema.spec.kubePrometheusStack.enabled}
+      readyWhen:
+        - ${kpsPrometheusOperatorImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-prometheus-operator
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: kube-prometheus-stack
+              resource:
+                name: prometheus-operator-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: kpsConfigReloaderImage
+      includeWhen:
+        - ${schema.spec.kubePrometheusStack.enabled}
+      readyWhen:
+        - ${kpsConfigReloaderImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-config-reloader
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: kube-prometheus-stack
+              resource:
+                name: config-reloader-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: kpsThanosImage
+      includeWhen:
+        - ${schema.spec.kubePrometheusStack.enabled}
+      readyWhen:
+        - ${kpsThanosImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-thanos
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: kube-prometheus-stack
+              resource:
+                name: thanos-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: kpsPrometheusImage
+      includeWhen:
+        - ${schema.spec.kubePrometheusStack.enabled}
+      readyWhen:
+        - ${kpsPrometheusImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-prometheus
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: kube-prometheus-stack
+              resource:
+                name: prometheus-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: kpsAlertmanagerImage
+      includeWhen:
+        - ${schema.spec.kubePrometheusStack.enabled}
+      readyWhen:
+        - ${kpsAlertmanagerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-alertmanager
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: kube-prometheus-stack
+              resource:
+                name: alertmanager-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: kpsWebhookCertgenImage
+      includeWhen:
+        - ${schema.spec.kubePrometheusStack.enabled}
+      readyWhen:
+        - ${kpsWebhookCertgenImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-webhook-certgen
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: kube-prometheus-stack
+              resource:
+                name: webhook-certgen-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: kpsKubeStateMetricsImage
+      includeWhen:
+        - ${schema.spec.kubePrometheusStack.enabled}
+      readyWhen:
+        - ${kpsKubeStateMetricsImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-kube-state-metrics
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: kube-prometheus-stack
+              resource:
+                name: kube-state-metrics-image
           additionalStatusFields:
             oci: resource.access.toOCI()
 
@@ -492,6 +878,43 @@ spec:
               enabled: false
             grafana:
               enabled: false
+            prometheusOperator:
+              image:
+                registry: ${kpsPrometheusOperatorImage.status.additional.oci.registry}
+                repository: ${kpsPrometheusOperatorImage.status.additional.oci.repository}
+                tag: v0.92.1@${kpsPrometheusOperatorImage.status.additional.oci.digest}
+              prometheusConfigReloader:
+                image:
+                  registry: ${kpsConfigReloaderImage.status.additional.oci.registry}
+                  repository: ${kpsConfigReloaderImage.status.additional.oci.repository}
+                  tag: v0.92.1@${kpsConfigReloaderImage.status.additional.oci.digest}
+              thanosImage:
+                registry: ${kpsThanosImage.status.additional.oci.registry}
+                repository: ${kpsThanosImage.status.additional.oci.repository}
+                tag: v0.42.0@${kpsThanosImage.status.additional.oci.digest}
+              admissionWebhooks:
+                patch:
+                  image:
+                    registry: ${kpsWebhookCertgenImage.status.additional.oci.registry}
+                    repository: ${kpsWebhookCertgenImage.status.additional.oci.repository}
+                    tag: 1.8.4@${kpsWebhookCertgenImage.status.additional.oci.digest}
+            prometheus:
+              prometheusSpec:
+                image:
+                  registry: ${kpsPrometheusImage.status.additional.oci.registry}
+                  repository: ${kpsPrometheusImage.status.additional.oci.repository}
+                  tag: v3.13.1-distroless@${kpsPrometheusImage.status.additional.oci.digest}
+            alertmanager:
+              alertmanagerSpec:
+                image:
+                  registry: ${kpsAlertmanagerImage.status.additional.oci.registry}
+                  repository: ${kpsAlertmanagerImage.status.additional.oci.repository}
+                  tag: v0.33.1@${kpsAlertmanagerImage.status.additional.oci.digest}
+            kube-state-metrics:
+              image:
+                registry: ${kpsKubeStateMetricsImage.status.additional.oci.registry}
+                repository: ${kpsKubeStateMetricsImage.status.additional.oci.repository}
+                tag: v2.19.1@${kpsKubeStateMetricsImage.status.additional.oci.digest}
 
     # ==========================================================
     # agentgateway-crds
@@ -586,6 +1009,52 @@ spec:
           additionalStatusFields:
             oci: resource.access.toOCI()
 
+    - id: agentgatewayControllerImage
+      includeWhen:
+        - ${schema.spec.agentgateway.enabled}
+      readyWhen:
+        - ${agentgatewayControllerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-agentgateway-controller
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: agentgateway
+              resource:
+                name: controller-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: agentgatewayProxyImage
+      includeWhen:
+        - ${schema.spec.agentgateway.enabled}
+      readyWhen:
+        - ${agentgatewayProxyImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-agentgateway-proxy
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: agentgateway
+              resource:
+                name: proxy-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
     - id: agentgatewayOciRepository
       includeWhen:
         - ${schema.spec.agentgateway.enabled}
@@ -633,6 +1102,16 @@ spec:
           values:
             inferenceExtension:
               enabled: true
+            controller:
+              image:
+                registry: ${agentgatewayControllerImage.status.additional.oci.registry}
+                repository: ${agentgatewayControllerImage.status.additional.oci.repository}
+                tag: v1.3.1@${agentgatewayControllerImage.status.additional.oci.digest}
+            proxy:
+              image:
+                registry: ${agentgatewayProxyImage.status.additional.oci.registry}
+                repository: ${agentgatewayProxyImage.status.additional.oci.repository}
+                tag: v1.3.1@${agentgatewayProxyImage.status.additional.oci.digest}
 
     # ==========================================================
     # external-dns
@@ -657,6 +1136,29 @@ spec:
                 - name: external-dns
               resource:
                 name: external-dns-chart
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: externalDnsImage
+      includeWhen:
+        - ${schema.spec.externalDns.enabled}
+      readyWhen:
+        - ${externalDnsImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-external-dns
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: external-dns
+              resource:
+                name: external-dns-image
           additionalStatusFields:
             oci: resource.access.toOCI()
 
@@ -706,6 +1208,9 @@ spec:
             sources:
               - gateway-httproute
               - gateway-grpcroute
+            image:
+              repository: ${externalDnsImage.status.additional.oci.registry}/${externalDnsImage.status.additional.oci.repository}
+              tag: v0.19.0@${externalDnsImage.status.additional.oci.digest}
 
     # ==========================================================
     # thalamus-crds
@@ -790,6 +1295,82 @@ spec:
           additionalStatusFields:
             oci: resource.access.toOCI()
 
+    - id: thalamusOperatorImage
+      readyWhen:
+        - ${thalamusOperatorImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-operator
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: operator-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: thalamusVllmImage
+      readyWhen:
+        - ${thalamusVllmImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-vllm-openai
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: vllm-openai-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: thalamusVllmCpuImage
+      readyWhen:
+        - ${thalamusVllmCpuImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-vllm-openai-cpu
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: vllm-openai-cpu-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: thalamusEppImage
+      readyWhen:
+        - ${thalamusEppImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-epp
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              resource:
+                name: epp-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
     - id: thalamusOciRepository
       readyWhen:
         - ${thalamusOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
@@ -829,6 +1410,28 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${thalamusOciRepository.metadata.name}
+          values:
+            operator:
+              image:
+                registry: ${thalamusOperatorImage.status.additional.oci.registry}
+                repository: ${thalamusOperatorImage.status.additional.oci.repository}
+                digest: ${thalamusOperatorImage.status.additional.oci.digest}
+            accelerators:
+              nvidia:
+                image:
+                  registry: ${thalamusVllmImage.status.additional.oci.registry}
+                  repository: ${thalamusVllmImage.status.additional.oci.repository}
+                  digest: ${thalamusVllmImage.status.additional.oci.digest}
+              cpu:
+                image:
+                  registry: ${thalamusVllmCpuImage.status.additional.oci.registry}
+                  repository: ${thalamusVllmCpuImage.status.additional.oci.repository}
+                  digest: ${thalamusVllmCpuImage.status.additional.oci.digest}
+            epp:
+              image:
+                registry: ${thalamusEppImage.status.additional.oci.registry}
+                repository: ${thalamusEppImage.status.additional.oci.repository}
+                digest: ${thalamusEppImage.status.additional.oci.digest}
 
     # ==========================================================
     # open-webui
@@ -853,6 +1456,52 @@ spec:
                 - name: open-webui
               resource:
                 name: open-webui-chart
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: openWebuiImage
+      includeWhen:
+        - ${schema.spec.openWebui.enabled}
+      readyWhen:
+        - ${openWebuiImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-open-webui
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: open-webui
+              resource:
+                name: open-webui-image
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+
+    - id: openWebuiRedisImage
+      includeWhen:
+        - ${schema.spec.openWebui.enabled}
+      readyWhen:
+        - ${openWebuiRedisImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${schema.spec.prefix}-image-redis
+          namespace: ${thalamusNamespace.metadata.name}
+        spec:
+          componentRef:
+            name: ${component.metadata.name}
+          resource:
+            byReference:
+              referencePath:
+                - name: open-webui
+              resource:
+                name: redis-image
           additionalStatusFields:
             oci: resource.access.toOCI()
 
@@ -899,6 +1548,14 @@ spec:
             kind: OCIRepository
             name: ${openWebuiOciRepository.metadata.name}
           values:
+            image:
+              repository: ${openWebuiImage.status.additional.oci.registry}/${openWebuiImage.status.additional.oci.repository}
+              tag: 0.10.2@${openWebuiImage.status.additional.oci.digest}
+            websocket:
+              redis:
+                image:
+                  repository: ${openWebuiRedisImage.status.additional.oci.registry}/${openWebuiRedisImage.status.additional.oci.repository}
+                  tag: 7.4.2-alpine3.21@${openWebuiRedisImage.status.additional.oci.digest}
             ollama:
               enabled: false
             pipelines:
