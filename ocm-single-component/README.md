@@ -35,12 +35,6 @@ kubectl create ns thalamus
 Lastly, `ocm add component-version` adds all components in `private` mode initially. For a demo, instead of configuring
 credentials, for now, it's easier to simply go through the created component version objects and make them public.
 
-There are ~11 components currently, so this is a bit cumbersome by hand. Here is a handy little script:
-
-```bash
-
-```
-
 ## Deployment
 
 ```sh
@@ -62,13 +56,6 @@ upstream image, digest-pinned. After a transfer with `--copy-resources` the
 access is rewritten to the target registry and the same RGD deploys the
 localized images unchanged.
 
-Charts without a dedicated digest value (node-feature-discovery, external-dns,
-open-webui, agentgateway, the gpu-operator deployment itself) get the combined
-`repository:tag@digest` reference smuggled through their tag field; container
-runtimes resolve such references by digest.
-
-Deliberately not localized: the NVIDIA driver image (the operator appends an
-OS suffix to the tag at runtime, so the default tag is not a pullable
-artifact), license-gated or hardware-conditional gpu-operator images (vgpu,
-kata, vfio, standalone dcgm), and subcharts disabled by our values (grafana,
-node-exporter, ollama, pipelines, tika, terminals).
+The following two large things are ignore for now because of size constraints:
+- vllm
+- gpu operator

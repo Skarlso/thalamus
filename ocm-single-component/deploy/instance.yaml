@@ -13,7 +13,7 @@ spec:
   version: "0.1.0"
   prefix: thalamus
   repository:
-    baseUrl: ghcr.io/skarlso/thalamus
+    baseUrl: ghcr.io/skarlso/thalamus-transferred
     type: OCIRegistry
   insecureRegistry: false
   nodeFeatureDiscovery:

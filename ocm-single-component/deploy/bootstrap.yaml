@@ -12,7 +12,7 @@ metadata:
   namespace: thalamus
 spec:
   repositorySpec:
-    baseUrl: ghcr.io/skarlso/thalamus
+    baseUrl: ghcr.io/skarlso/thalamus-transferred
     type: OCIRegistry
   interval: 10m
 ---
