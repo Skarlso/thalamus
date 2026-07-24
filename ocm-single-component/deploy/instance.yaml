@@ -10,21 +10,15 @@ metadata:
   name: thalamus
   namespace: thalamus
 spec:
-  version: "0.1.0"
-  prefix: thalamus
-  repository:
-    baseUrl: ghcr.io/skarlso/thalamus-transferred
-    type: OCIRegistry
-  insecureRegistry: false
   nodeFeatureDiscovery:
     enabled: true
   gpuOperator:
-    enabled: true
+    enabled: false
   kubePrometheusStack:
-    enabled: true
+    enabled: false
   agentgateway:
     enabled: true
   externalDns:
-    enabled: false
+    enabled: true
   openWebui:
     enabled: true

@@ -14,23 +14,13 @@ spec:
     kind: Thalamus
     scope: Namespaced
     spec:
-      version: string | default="0.1.0"
-      prefix: string | default="thalamus"
-      repository: object
-      insecureRegistry: boolean | default=false
-      nodeFeatureDiscovery:
-        enabled: boolean | default=true
-      gpuOperator:
-        enabled: boolean | default=true
-      kubePrometheusStack:
-        enabled: boolean | default=true
-      agentgateway:
-        enabled: boolean | default=true
-      externalDns:
-        enabled: boolean | default=false
-      openWebui:
-        enabled: boolean | default=true
-        openaiBaseApiUrl: string | default="http://inference-gateway.thalamus.svc.cluster.local/v1"
+      nodeFeatureDiscovery: object
+      gpuOperator: object
+      kubePrometheusStack: object
+      agentgateway: object
+      externalDns: object
+      openWebui: object
+      thalamus: object
     status:
       ready: ${thalamusHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
   resources:
@@ -51,10 +41,12 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Repository
         metadata:
-          name: ${schema.spec.prefix}-repository
+          name: ${schema.metadata.name}-repository
           namespace: ${thalamusNamespace.metadata.name}
         spec:
-          repositorySpec: ${schema.spec.repository}
+          repositorySpec:
+            baseUrl: "keppel.eu-de-1.cloud.sap/thalamus/ocm"
+            type: OCIRegistry
           interval: 10m
 
     - id: component
@@ -64,13 +56,13 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Component
         metadata:
-          name: ${schema.spec.prefix}-component
+          name: ${schema.metadata.name}-component
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           component: github.com/cobaltcore-dev/thalamus
           repositoryRef:
             name: ${repository.metadata.name}
-          semver: ${schema.spec.version}
+          semver: ">=0.1.0"
           interval: 1m
 
     - id: rgdResource
@@ -80,7 +72,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-rgd
+          name: ${schema.metadata.name}-resource-rgd
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -97,7 +89,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Deployer
         metadata:
-          name: ${schema.spec.prefix}-deployer
+          name: ${schema.metadata.name}-deployer
         spec:
           resourceRef:
             name: ${rgdResource.metadata.name}
@@ -108,7 +100,7 @@ spec:
     # ==========================================================
     - id: nfdNamespace
       includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
+        - ${schema.spec.nodeFeatureDiscovery != null && has(schema.spec.nodeFeatureDiscovery.enabled) && schema.spec.nodeFeatureDiscovery.enabled}
       template:
         apiVersion: v1
         kind: Namespace
@@ -117,7 +109,7 @@ spec:
 
     - id: gpuOperatorNamespace
       includeWhen:
-        - ${schema.spec.gpuOperator.enabled}
+        - ${schema.spec.gpuOperator != null && has(schema.spec.gpuOperator.enabled) && schema.spec.gpuOperator.enabled}
       template:
         apiVersion: v1
         kind: Namespace
@@ -126,7 +118,7 @@ spec:
 
     - id: monitoringNamespace
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       template:
         apiVersion: v1
         kind: Namespace
@@ -135,7 +127,7 @@ spec:
 
     - id: agentgatewayNamespace
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       template:
         apiVersion: v1
         kind: Namespace
@@ -144,7 +136,7 @@ spec:
 
     - id: externalDnsNamespace
       includeWhen:
-        - ${schema.spec.externalDns.enabled}
+        - ${schema.spec.externalDns != null && has(schema.spec.externalDns.enabled) && schema.spec.externalDns.enabled}
       template:
         apiVersion: v1
         kind: Namespace
@@ -153,7 +145,7 @@ spec:
 
     - id: openWebuiNamespace
       includeWhen:
-        - ${schema.spec.openWebui.enabled}
+        - ${schema.spec.openWebui != null && has(schema.spec.openWebui.enabled) && schema.spec.openWebui.enabled}
       template:
         apiVersion: v1
         kind: Namespace
@@ -170,7 +162,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-gateway-api-crds
+          name: ${schema.metadata.name}-resource-gateway-api-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -191,11 +183,10 @@ spec:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-gateway-api-crds
+          name: ${schema.metadata.name}-oci-gateway-api-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -231,7 +222,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-gateway-api-inference-extension-crds
+          name: ${schema.metadata.name}-resource-gateway-api-inference-extension-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -252,11 +243,10 @@ spec:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-gateway-api-inference-extension-crds
+          name: ${schema.metadata.name}-oci-gateway-api-inference-extension-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -287,14 +277,14 @@ spec:
     # ==========================================================
     - id: nfdChartResource
       includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
+        - ${schema.spec.nodeFeatureDiscovery != null && has(schema.spec.nodeFeatureDiscovery.enabled) && schema.spec.nodeFeatureDiscovery.enabled}
       readyWhen:
         - ${nfdChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-node-feature-discovery
+          name: ${schema.metadata.name}-resource-node-feature-discovery
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -310,14 +300,14 @@ spec:
 
     - id: nfdImage
       includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
+        - ${schema.spec.nodeFeatureDiscovery != null && has(schema.spec.nodeFeatureDiscovery.enabled) && schema.spec.nodeFeatureDiscovery.enabled}
       readyWhen:
         - ${nfdImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-node-feature-discovery
+          name: ${schema.metadata.name}-image-node-feature-discovery
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -333,18 +323,17 @@ spec:
 
     - id: nfdOciRepository
       includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
+        - ${schema.spec.nodeFeatureDiscovery != null && has(schema.spec.nodeFeatureDiscovery.enabled) && schema.spec.nodeFeatureDiscovery.enabled}
       readyWhen:
         - ${nfdOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-node-feature-discovery
+          name: ${schema.metadata.name}-oci-node-feature-discovery
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -354,7 +343,7 @@ spec:
 
     - id: nfdHelmRelease
       includeWhen:
-        - ${schema.spec.nodeFeatureDiscovery.enabled}
+        - ${schema.spec.nodeFeatureDiscovery != null && has(schema.spec.nodeFeatureDiscovery.enabled) && schema.spec.nodeFeatureDiscovery.enabled}
       readyWhen:
         - ${nfdHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
@@ -371,24 +360,29 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${nfdOciRepository.metadata.name}
-          values:
-            image:
-              repository: ${nfdImage.status.additional.oci.registry}/${nfdImage.status.additional.oci.repository}
-              tag: v0.19.0@${nfdImage.status.additional.oci.digest}
+          values: |-
+            ${
+              {
+                "image": {
+                  "repository": nfdImage.status.additional.oci.registry + "/" + nfdImage.status.additional.oci.repository,
+                  "tag": "v0.19.0@" + nfdImage.status.additional.oci.digest,
+                },
+              }.merge(schema.spec.nodeFeatureDiscovery)
+            }
 
     # ==========================================================
     # gpu-operator
     # ==========================================================
     - id: gpuOperatorChartResource
       includeWhen:
-        - ${schema.spec.gpuOperator.enabled}
+        - ${schema.spec.gpuOperator != null && has(schema.spec.gpuOperator.enabled) && schema.spec.gpuOperator.enabled}
       readyWhen:
         - ${gpuOperatorChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-gpu-operator
+          name: ${schema.metadata.name}-resource-gpu-operator
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -404,18 +398,17 @@ spec:
 
     - id: gpuOperatorOciRepository
       includeWhen:
-        - ${schema.spec.gpuOperator.enabled}
+        - ${schema.spec.gpuOperator != null && has(schema.spec.gpuOperator.enabled) && schema.spec.gpuOperator.enabled}
       readyWhen:
         - ${gpuOperatorOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-gpu-operator
+          name: ${schema.metadata.name}-oci-gpu-operator
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -425,7 +418,7 @@ spec:
 
     - id: gpuOperatorHelmRelease
       includeWhen:
-        - ${schema.spec.gpuOperator.enabled}
+        - ${schema.spec.gpuOperator != null && has(schema.spec.gpuOperator.enabled) && schema.spec.gpuOperator.enabled}
       readyWhen:
         - ${gpuOperatorHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
@@ -444,23 +437,26 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${gpuOperatorOciRepository.metadata.name}
-          values:
-            nfd:
-              enabled: false
+          values: |-
+            ${
+              schema.spec.gpuOperator.merge({
+                "nfd": {"enabled": false}.merge(has(schema.spec.gpuOperator.nfd) ? schema.spec.gpuOperator.nfd : {}),
+              })
+            }
 
     # ==========================================================
     # kube-prometheus-stack
     # ==========================================================
     - id: kpsChartResource
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-kube-prometheus-stack
+          name: ${schema.metadata.name}-resource-kube-prometheus-stack
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -476,14 +472,14 @@ spec:
 
     - id: kpsPrometheusOperatorImage
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsPrometheusOperatorImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-prometheus-operator
+          name: ${schema.metadata.name}-image-prometheus-operator
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -499,14 +495,14 @@ spec:
 
     - id: kpsConfigReloaderImage
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsConfigReloaderImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-config-reloader
+          name: ${schema.metadata.name}-image-config-reloader
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -522,14 +518,14 @@ spec:
 
     - id: kpsThanosImage
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsThanosImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-thanos
+          name: ${schema.metadata.name}-image-thanos
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -545,14 +541,14 @@ spec:
 
     - id: kpsPrometheusImage
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsPrometheusImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-prometheus
+          name: ${schema.metadata.name}-image-prometheus
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -568,14 +564,14 @@ spec:
 
     - id: kpsAlertmanagerImage
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsAlertmanagerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-alertmanager
+          name: ${schema.metadata.name}-image-alertmanager
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -591,14 +587,14 @@ spec:
 
     - id: kpsWebhookCertgenImage
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsWebhookCertgenImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-webhook-certgen
+          name: ${schema.metadata.name}-image-webhook-certgen
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -614,14 +610,14 @@ spec:
 
     - id: kpsKubeStateMetricsImage
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsKubeStateMetricsImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-kube-state-metrics
+          name: ${schema.metadata.name}-image-kube-state-metrics
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -637,18 +633,17 @@ spec:
 
     - id: kpsOciRepository
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-kube-prometheus-stack
+          name: ${schema.metadata.name}-oci-kube-prometheus-stack
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -658,7 +653,7 @@ spec:
 
     - id: kpsHelmRelease
       includeWhen:
-        - ${schema.spec.kubePrometheusStack.enabled}
+        - ${schema.spec.kubePrometheusStack != null && has(schema.spec.kubePrometheusStack.enabled) && schema.spec.kubePrometheusStack.enabled}
       readyWhen:
         - ${kpsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
@@ -675,62 +670,83 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${kpsOciRepository.metadata.name}
-          values:
-            nodeExporter:
-              enabled: false
-            grafana:
-              enabled: false
-            prometheusOperator:
-              image:
-                registry: ${kpsPrometheusOperatorImage.status.additional.oci.registry}
-                repository: ${kpsPrometheusOperatorImage.status.additional.oci.repository}
-                tag: v0.92.1@${kpsPrometheusOperatorImage.status.additional.oci.digest}
-              prometheusConfigReloader:
-                image:
-                  registry: ${kpsConfigReloaderImage.status.additional.oci.registry}
-                  repository: ${kpsConfigReloaderImage.status.additional.oci.repository}
-                  tag: v0.92.1@${kpsConfigReloaderImage.status.additional.oci.digest}
-              thanosImage:
-                registry: ${kpsThanosImage.status.additional.oci.registry}
-                repository: ${kpsThanosImage.status.additional.oci.repository}
-                tag: v0.42.0@${kpsThanosImage.status.additional.oci.digest}
-              admissionWebhooks:
-                patch:
-                  image:
-                    registry: ${kpsWebhookCertgenImage.status.additional.oci.registry}
-                    repository: ${kpsWebhookCertgenImage.status.additional.oci.repository}
-                    tag: 1.8.4@${kpsWebhookCertgenImage.status.additional.oci.digest}
-            prometheus:
-              prometheusSpec:
-                image:
-                  registry: ${kpsPrometheusImage.status.additional.oci.registry}
-                  repository: ${kpsPrometheusImage.status.additional.oci.repository}
-                  tag: v3.13.1-distroless@${kpsPrometheusImage.status.additional.oci.digest}
-            alertmanager:
-              alertmanagerSpec:
-                image:
-                  registry: ${kpsAlertmanagerImage.status.additional.oci.registry}
-                  repository: ${kpsAlertmanagerImage.status.additional.oci.repository}
-                  tag: v0.33.1@${kpsAlertmanagerImage.status.additional.oci.digest}
-            kube-state-metrics:
-              image:
-                registry: ${kpsKubeStateMetricsImage.status.additional.oci.registry}
-                repository: ${kpsKubeStateMetricsImage.status.additional.oci.repository}
-                tag: v2.19.1@${kpsKubeStateMetricsImage.status.additional.oci.digest}
+          values: |-
+            ${
+              {
+                "nodeExporter": {"enabled": false},
+                "grafana": {"enabled": false},
+              }.merge(schema.spec.kubePrometheusStack).merge({
+                "nodeExporter": {"enabled": false}.merge(has(schema.spec.kubePrometheusStack.nodeExporter) ? schema.spec.kubePrometheusStack.nodeExporter : {}),
+                "grafana": {"enabled": false}.merge(has(schema.spec.kubePrometheusStack.grafana) ? schema.spec.kubePrometheusStack.grafana : {}),
+                "prometheusOperator": (has(schema.spec.kubePrometheusStack.prometheusOperator) ? schema.spec.kubePrometheusStack.prometheusOperator : {}).merge({
+                  "image": {
+                    "registry": kpsPrometheusOperatorImage.status.additional.oci.registry,
+                    "repository": kpsPrometheusOperatorImage.status.additional.oci.repository,
+                    "tag": "v0.92.1@" + kpsPrometheusOperatorImage.status.additional.oci.digest,
+                  }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.image) ? schema.spec.kubePrometheusStack.prometheusOperator.image : {}),
+                  "thanosImage": {
+                    "registry": kpsThanosImage.status.additional.oci.registry,
+                    "repository": kpsThanosImage.status.additional.oci.repository,
+                    "tag": "v0.42.0@" + kpsThanosImage.status.additional.oci.digest,
+                  }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.thanosImage) ? schema.spec.kubePrometheusStack.prometheusOperator.thanosImage : {}),
+                  "prometheusConfigReloader": (has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader) ? schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader : {}).merge({
+                    "image": {
+                      "registry": kpsConfigReloaderImage.status.additional.oci.registry,
+                      "repository": kpsConfigReloaderImage.status.additional.oci.repository,
+                      "tag": "v0.92.1@" + kpsConfigReloaderImage.status.additional.oci.digest,
+                    }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader) && has(schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader.image) ? schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader.image : {}),
+                  }),
+                  "admissionWebhooks": (has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks) ? schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks : {}).merge({
+                    "patch": (has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch) ? schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch : {}).merge({
+                      "image": {
+                        "registry": kpsWebhookCertgenImage.status.additional.oci.registry,
+                        "repository": kpsWebhookCertgenImage.status.additional.oci.repository,
+                        "tag": "1.8.4@" + kpsWebhookCertgenImage.status.additional.oci.digest,
+                      }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch.image) ? schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch.image : {}),
+                    }),
+                  }),
+                }),
+                "prometheus": (has(schema.spec.kubePrometheusStack.prometheus) ? schema.spec.kubePrometheusStack.prometheus : {}).merge({
+                  "prometheusSpec": (has(schema.spec.kubePrometheusStack.prometheus) && has(schema.spec.kubePrometheusStack.prometheus.prometheusSpec) ? schema.spec.kubePrometheusStack.prometheus.prometheusSpec : {}).merge({
+                    "image": {
+                      "registry": kpsPrometheusImage.status.additional.oci.registry,
+                      "repository": kpsPrometheusImage.status.additional.oci.repository,
+                      "tag": "v3.13.1-distroless@" + kpsPrometheusImage.status.additional.oci.digest,
+                    }.merge(has(schema.spec.kubePrometheusStack.prometheus) && has(schema.spec.kubePrometheusStack.prometheus.prometheusSpec) && has(schema.spec.kubePrometheusStack.prometheus.prometheusSpec.image) ? schema.spec.kubePrometheusStack.prometheus.prometheusSpec.image : {}),
+                  }),
+                }),
+                "alertmanager": (has(schema.spec.kubePrometheusStack.alertmanager) ? schema.spec.kubePrometheusStack.alertmanager : {}).merge({
+                  "alertmanagerSpec": (has(schema.spec.kubePrometheusStack.alertmanager) && has(schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec) ? schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec : {}).merge({
+                    "image": {
+                      "registry": kpsAlertmanagerImage.status.additional.oci.registry,
+                      "repository": kpsAlertmanagerImage.status.additional.oci.repository,
+                      "tag": "v0.33.1@" + kpsAlertmanagerImage.status.additional.oci.digest,
+                    }.merge(has(schema.spec.kubePrometheusStack.alertmanager) && has(schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec) && has(schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec.image) ? schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec.image : {}),
+                  }),
+                }),
+                "kube-state-metrics": (has(schema.spec.kubePrometheusStack["kube-state-metrics"]) ? schema.spec.kubePrometheusStack["kube-state-metrics"] : {}).merge({
+                  "image": {
+                    "registry": kpsKubeStateMetricsImage.status.additional.oci.registry,
+                    "repository": kpsKubeStateMetricsImage.status.additional.oci.repository,
+                    "tag": "v2.19.1@" + kpsKubeStateMetricsImage.status.additional.oci.digest,
+                  }.merge(has(schema.spec.kubePrometheusStack["kube-state-metrics"]) && has(schema.spec.kubePrometheusStack["kube-state-metrics"].image) ? schema.spec.kubePrometheusStack["kube-state-metrics"].image : {}),
+                }),
+              })
+            }
 
     # ==========================================================
     # agentgateway-crds
     # ==========================================================
     - id: agentgatewayCrdsChartResource
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayCrdsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-agentgateway-crds
+          name: ${schema.metadata.name}-resource-agentgateway-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -746,18 +762,17 @@ spec:
 
     - id: agentgatewayCrdsOciRepository
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayCrdsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-agentgateway-crds
+          name: ${schema.metadata.name}-oci-agentgateway-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -767,7 +782,7 @@ spec:
 
     - id: agentgatewayCrdsHelmRelease
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayCrdsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
@@ -790,14 +805,14 @@ spec:
     # ==========================================================
     - id: agentgatewayChartResource
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-agentgateway
+          name: ${schema.metadata.name}-resource-agentgateway
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -813,14 +828,14 @@ spec:
 
     - id: agentgatewayControllerImage
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayControllerImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-agentgateway-controller
+          name: ${schema.metadata.name}-image-agentgateway-controller
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -836,14 +851,14 @@ spec:
 
     - id: agentgatewayProxyImage
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayProxyImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-agentgateway-proxy
+          name: ${schema.metadata.name}-image-agentgateway-proxy
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -859,18 +874,17 @@ spec:
 
     - id: agentgatewayOciRepository
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-agentgateway
+          name: ${schema.metadata.name}-oci-agentgateway
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -880,7 +894,7 @@ spec:
 
     - id: agentgatewayHelmRelease
       includeWhen:
-        - ${schema.spec.agentgateway.enabled}
+        - ${schema.spec.agentgateway != null && has(schema.spec.agentgateway.enabled) && schema.spec.agentgateway.enabled}
       readyWhen:
         - ${agentgatewayHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
@@ -901,33 +915,40 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${agentgatewayOciRepository.metadata.name}
-          values:
-            inferenceExtension:
-              enabled: true
-            controller:
-              image:
-                registry: ${agentgatewayControllerImage.status.additional.oci.registry}
-                repository: ${agentgatewayControllerImage.status.additional.oci.repository}
-                tag: v1.3.1@${agentgatewayControllerImage.status.additional.oci.digest}
-            proxy:
-              image:
-                registry: ${agentgatewayProxyImage.status.additional.oci.registry}
-                repository: ${agentgatewayProxyImage.status.additional.oci.repository}
-                tag: v1.3.1@${agentgatewayProxyImage.status.additional.oci.digest}
+          values: |-
+            ${
+              schema.spec.agentgateway.merge({
+                "inferenceExtension": {"enabled": true}.merge(has(schema.spec.agentgateway.inferenceExtension) ? schema.spec.agentgateway.inferenceExtension : {}),
+                "controller": {
+                  "image": {
+                    "registry": agentgatewayControllerImage.status.additional.oci.registry,
+                    "repository": agentgatewayControllerImage.status.additional.oci.repository,
+                    "tag": "v1.3.1@" + agentgatewayControllerImage.status.additional.oci.digest,
+                  },
+                }.merge(has(schema.spec.agentgateway.controller) ? schema.spec.agentgateway.controller : {}),
+                "proxy": {
+                  "image": {
+                    "registry": agentgatewayProxyImage.status.additional.oci.registry,
+                    "repository": agentgatewayProxyImage.status.additional.oci.repository,
+                    "tag": "v1.3.1@" + agentgatewayProxyImage.status.additional.oci.digest,
+                  },
+                }.merge(has(schema.spec.agentgateway.proxy) ? schema.spec.agentgateway.proxy : {}),
+              })
+            }
 
     # ==========================================================
     # external-dns
     # ==========================================================
     - id: externalDnsChartResource
       includeWhen:
-        - ${schema.spec.externalDns.enabled}
+        - ${schema.spec.externalDns != null && has(schema.spec.externalDns.enabled) && schema.spec.externalDns.enabled}
       readyWhen:
         - ${externalDnsChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-external-dns
+          name: ${schema.metadata.name}-resource-external-dns
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -943,14 +964,14 @@ spec:
 
     - id: externalDnsImage
       includeWhen:
-        - ${schema.spec.externalDns.enabled}
+        - ${schema.spec.externalDns != null && has(schema.spec.externalDns.enabled) && schema.spec.externalDns.enabled}
       readyWhen:
         - ${externalDnsImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-external-dns
+          name: ${schema.metadata.name}-image-external-dns
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -966,18 +987,17 @@ spec:
 
     - id: externalDnsOciRepository
       includeWhen:
-        - ${schema.spec.externalDns.enabled}
+        - ${schema.spec.externalDns != null && has(schema.spec.externalDns.enabled) && schema.spec.externalDns.enabled}
       readyWhen:
         - ${externalDnsOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-external-dns
+          name: ${schema.metadata.name}-oci-external-dns
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -987,7 +1007,7 @@ spec:
 
     - id: externalDnsHelmRelease
       includeWhen:
-        - ${schema.spec.externalDns.enabled}
+        - ${schema.spec.externalDns != null && has(schema.spec.externalDns.enabled) && schema.spec.externalDns.enabled}
       readyWhen:
         - ${externalDnsHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
@@ -1006,13 +1026,16 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${externalDnsOciRepository.metadata.name}
-          values:
-            sources:
-              - gateway-httproute
-              - gateway-grpcroute
-            image:
-              repository: ${externalDnsImage.status.additional.oci.registry}/${externalDnsImage.status.additional.oci.repository}
-              tag: v0.19.0@${externalDnsImage.status.additional.oci.digest}
+          values: |-
+            ${
+              {
+                "sources": ["gateway-httproute", "gateway-grpcroute"],
+                "image": {
+                  "repository": externalDnsImage.status.additional.oci.registry + "/" + externalDnsImage.status.additional.oci.repository,
+                  "tag": "v0.19.0@" + externalDnsImage.status.additional.oci.digest,
+                },
+              }.merge(schema.spec.externalDns)
+            }
 
     # ==========================================================
     # thalamus-crds
@@ -1024,7 +1047,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-thalamus-crds
+          name: ${schema.metadata.name}-resource-thalamus-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -1045,11 +1068,10 @@ spec:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-thalamus-crds
+          name: ${schema.metadata.name}-oci-thalamus-crds
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -1085,7 +1107,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-thalamus
+          name: ${schema.metadata.name}-resource-thalamus
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -1104,7 +1126,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-operator
+          name: ${schema.metadata.name}-image-operator
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -1123,7 +1145,7 @@ spec:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-epp
+          name: ${schema.metadata.name}-image-epp
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -1142,11 +1164,10 @@ spec:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-thalamus
+          name: ${schema.metadata.name}-oci-thalamus
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -1191,14 +1212,14 @@ spec:
     # ==========================================================
     - id: openWebuiChartResource
       includeWhen:
-        - ${schema.spec.openWebui.enabled}
+        - ${schema.spec.openWebui != null && has(schema.spec.openWebui.enabled) && schema.spec.openWebui.enabled}
       readyWhen:
         - ${openWebuiChartResource.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-resource-open-webui
+          name: ${schema.metadata.name}-resource-open-webui
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -1214,14 +1235,14 @@ spec:
 
     - id: openWebuiImage
       includeWhen:
-        - ${schema.spec.openWebui.enabled}
+        - ${schema.spec.openWebui != null && has(schema.spec.openWebui.enabled) && schema.spec.openWebui.enabled}
       readyWhen:
         - ${openWebuiImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-open-webui
+          name: ${schema.metadata.name}-image-open-webui
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -1237,14 +1258,14 @@ spec:
 
     - id: openWebuiRedisImage
       includeWhen:
-        - ${schema.spec.openWebui.enabled}
+        - ${schema.spec.openWebui != null && has(schema.spec.openWebui.enabled) && schema.spec.openWebui.enabled}
       readyWhen:
         - ${openWebuiRedisImage.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: delivery.ocm.software/v1alpha1
         kind: Resource
         metadata:
-          name: ${schema.spec.prefix}-image-redis
+          name: ${schema.metadata.name}-image-redis
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           componentRef:
@@ -1260,18 +1281,17 @@ spec:
 
     - id: openWebuiOciRepository
       includeWhen:
-        - ${schema.spec.openWebui.enabled}
+        - ${schema.spec.openWebui != null && has(schema.spec.openWebui.enabled) && schema.spec.openWebui.enabled}
       readyWhen:
         - ${openWebuiOciRepository.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
         apiVersion: source.toolkit.fluxcd.io/v1
         kind: OCIRepository
         metadata:
-          name: ${schema.spec.prefix}-oci-open-webui
+          name: ${schema.metadata.name}-oci-open-webui
           namespace: ${thalamusNamespace.metadata.name}
         spec:
           interval: 1m0s
-          insecure: ${schema.spec.insecureRegistry}
           layerSelector:
             mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
             operation: copy
@@ -1281,7 +1301,7 @@ spec:
 
     - id: openWebuiHelmRelease
       includeWhen:
-        - ${schema.spec.openWebui.enabled}
+        - ${schema.spec.openWebui != null && has(schema.spec.openWebui.enabled) && schema.spec.openWebui.enabled}
       readyWhen:
         - ${openWebuiHelmRelease.status.conditions.exists(c, c.type == "Ready" && c.status == "True")}
       template:
@@ -1300,31 +1320,31 @@ spec:
           chartRef:
             kind: OCIRepository
             name: ${openWebuiOciRepository.metadata.name}
-          values:
-            image:
-              repository: ${openWebuiImage.status.additional.oci.registry}/${openWebuiImage.status.additional.oci.repository}
-              tag: 0.10.2@${openWebuiImage.status.additional.oci.digest}
-            websocket:
-              redis:
-                image:
-                  repository: ${openWebuiRedisImage.status.additional.oci.registry}/${openWebuiRedisImage.status.additional.oci.repository}
-                  tag: 7.4.2-alpine3.21@${openWebuiRedisImage.status.additional.oci.digest}
-            ollama:
-              enabled: false
-            pipelines:
-              enabled: false
-            tika:
-              enabled: false
-            terminals:
-              enabled: false
-            extraEnvVars:
-              - name: WEBUI_AUTH
-                value: "False"
-            service:
-              type: ClusterIP
-            openaiBaseApiUrl: ${schema.spec.openWebui.openaiBaseApiUrl}
-            route:
-              enabled: true
-              parentRefs:
-                - name: inference-gateway
-                  namespace: thalamus
+          values: |-
+            ${
+              {
+                "image": {
+                  "repository": openWebuiImage.status.additional.oci.registry + "/" + openWebuiImage.status.additional.oci.repository,
+                  "tag": "0.10.2@" + openWebuiImage.status.additional.oci.digest,
+                },
+                "ollama": {"enabled": false},
+                "pipelines": {"enabled": false},
+                "tika": {"enabled": false},
+                "terminals": {"enabled": false},
+                "extraEnvVars": [{"name": "WEBUI_AUTH", "value": "False"}],
+                "service": {"type": "ClusterIP"},
+                "route": {
+                  "enabled": true,
+                  "parentRefs": [{"name": "inference-gateway", "namespace": "thalamus"}],
+                },
+              }.merge(schema.spec.openWebui).merge({
+                "websocket": (has(schema.spec.openWebui.websocket) ? schema.spec.openWebui.websocket : {}).merge({
+                  "redis": {
+                    "image": {
+                      "repository": openWebuiRedisImage.status.additional.oci.registry + "/" + openWebuiRedisImage.status.additional.oci.repository,
+                      "tag": "7.4.2-alpine3.21@" + openWebuiRedisImage.status.additional.oci.digest,
+                    },
+                  }.merge(has(schema.spec.openWebui.websocket) && has(schema.spec.openWebui.websocket.redis) ? schema.spec.openWebui.websocket.redis : {}),
+                }),
+              })
+            }
