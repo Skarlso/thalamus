@@ -367,7 +367,7 @@ spec:
                   "repository": nfdImage.status.additional.oci.registry + "/" + nfdImage.status.additional.oci.repository,
                   "tag": "v0.19.0@" + nfdImage.status.additional.oci.digest,
                 },
-              }.merge(schema.spec.nodeFeatureDiscovery)
+              }.merge(dyn(schema.spec.nodeFeatureDiscovery))
             }
 
     # ==========================================================
@@ -439,8 +439,8 @@ spec:
             name: ${gpuOperatorOciRepository.metadata.name}
           values: |-
             ${
-              schema.spec.gpuOperator.merge({
-                "nfd": {"enabled": false}.merge(has(schema.spec.gpuOperator.nfd) ? schema.spec.gpuOperator.nfd : {}),
+              dyn(schema.spec.gpuOperator).merge({
+                "nfd": {"enabled": false}.merge(has(schema.spec.gpuOperator.nfd) ? dyn(schema.spec.gpuOperator.nfd) : {}),
               })
             }
 
@@ -672,66 +672,68 @@ spec:
             name: ${kpsOciRepository.metadata.name}
           values: |-
             ${
-              {
-                "nodeExporter": {"enabled": false},
-                "grafana": {"enabled": false},
-              }.merge(schema.spec.kubePrometheusStack).merge({
-                "nodeExporter": {"enabled": false}.merge(has(schema.spec.kubePrometheusStack.nodeExporter) ? schema.spec.kubePrometheusStack.nodeExporter : {}),
-                "grafana": {"enabled": false}.merge(has(schema.spec.kubePrometheusStack.grafana) ? schema.spec.kubePrometheusStack.grafana : {}),
-                "prometheusOperator": (has(schema.spec.kubePrometheusStack.prometheusOperator) ? schema.spec.kubePrometheusStack.prometheusOperator : {}).merge({
-                  "image": {
-                    "registry": kpsPrometheusOperatorImage.status.additional.oci.registry,
-                    "repository": kpsPrometheusOperatorImage.status.additional.oci.repository,
-                    "tag": "v0.92.1@" + kpsPrometheusOperatorImage.status.additional.oci.digest,
-                  }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.image) ? schema.spec.kubePrometheusStack.prometheusOperator.image : {}),
-                  "thanosImage": {
-                    "registry": kpsThanosImage.status.additional.oci.registry,
-                    "repository": kpsThanosImage.status.additional.oci.repository,
-                    "tag": "v0.42.0@" + kpsThanosImage.status.additional.oci.digest,
-                  }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.thanosImage) ? schema.spec.kubePrometheusStack.prometheusOperator.thanosImage : {}),
-                  "prometheusConfigReloader": (has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader) ? schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader : {}).merge({
-                    "image": {
-                      "registry": kpsConfigReloaderImage.status.additional.oci.registry,
-                      "repository": kpsConfigReloaderImage.status.additional.oci.repository,
-                      "tag": "v0.92.1@" + kpsConfigReloaderImage.status.additional.oci.digest,
-                    }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader) && has(schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader.image) ? schema.spec.kubePrometheusStack.prometheusOperator.prometheusConfigReloader.image : {}),
-                  }),
-                  "admissionWebhooks": (has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks) ? schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks : {}).merge({
-                    "patch": (has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch) ? schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch : {}).merge({
-                      "image": {
-                        "registry": kpsWebhookCertgenImage.status.additional.oci.registry,
-                        "repository": kpsWebhookCertgenImage.status.additional.oci.repository,
-                        "tag": "1.8.4@" + kpsWebhookCertgenImage.status.additional.oci.digest,
-                      }.merge(has(schema.spec.kubePrometheusStack.prometheusOperator) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch) && has(schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch.image) ? schema.spec.kubePrometheusStack.prometheusOperator.admissionWebhooks.patch.image : {}),
+              cel.bind(kps, dyn(schema.spec.kubePrometheusStack),
+                dyn({
+                  "nodeExporter": {"enabled": false},
+                  "grafana": {"enabled": false},
+                }).merge(kps).merge({
+                  "nodeExporter": dyn({"enabled": false}).merge(has(kps.nodeExporter) ? kps.nodeExporter : {}),
+                  "grafana": dyn({"enabled": false}).merge(has(kps.grafana) ? kps.grafana : {}),
+                  "prometheusOperator": dyn(has(kps.prometheusOperator) ? kps.prometheusOperator : {}).merge({
+                    "image": dyn({
+                      "registry": kpsPrometheusOperatorImage.status.additional.oci.registry,
+                      "repository": kpsPrometheusOperatorImage.status.additional.oci.repository,
+                      "tag": "v0.92.1@" + kpsPrometheusOperatorImage.status.additional.oci.digest,
+                    }).merge(has(kps.prometheusOperator) && has(kps.prometheusOperator.image) ? kps.prometheusOperator.image : {}),
+                    "thanosImage": dyn({
+                      "registry": kpsThanosImage.status.additional.oci.registry,
+                      "repository": kpsThanosImage.status.additional.oci.repository,
+                      "tag": "v0.42.0@" + kpsThanosImage.status.additional.oci.digest,
+                    }).merge(has(kps.prometheusOperator) && has(kps.prometheusOperator.thanosImage) ? kps.prometheusOperator.thanosImage : {}),
+                    "prometheusConfigReloader": dyn(has(kps.prometheusOperator) && has(kps.prometheusOperator.prometheusConfigReloader) ? kps.prometheusOperator.prometheusConfigReloader : {}).merge({
+                      "image": dyn({
+                        "registry": kpsConfigReloaderImage.status.additional.oci.registry,
+                        "repository": kpsConfigReloaderImage.status.additional.oci.repository,
+                        "tag": "v0.92.1@" + kpsConfigReloaderImage.status.additional.oci.digest,
+                      }).merge(has(kps.prometheusOperator) && has(kps.prometheusOperator.prometheusConfigReloader) && has(kps.prometheusOperator.prometheusConfigReloader.image) ? kps.prometheusOperator.prometheusConfigReloader.image : {}),
+                    }),
+                    "admissionWebhooks": dyn(has(kps.prometheusOperator) && has(kps.prometheusOperator.admissionWebhooks) ? kps.prometheusOperator.admissionWebhooks : {}).merge({
+                      "patch": dyn(has(kps.prometheusOperator) && has(kps.prometheusOperator.admissionWebhooks) && has(kps.prometheusOperator.admissionWebhooks.patch) ? kps.prometheusOperator.admissionWebhooks.patch : {}).merge({
+                        "image": dyn({
+                          "registry": kpsWebhookCertgenImage.status.additional.oci.registry,
+                          "repository": kpsWebhookCertgenImage.status.additional.oci.repository,
+                          "tag": "1.8.4@" + kpsWebhookCertgenImage.status.additional.oci.digest,
+                        }).merge(has(kps.prometheusOperator) && has(kps.prometheusOperator.admissionWebhooks) && has(kps.prometheusOperator.admissionWebhooks.patch) && has(kps.prometheusOperator.admissionWebhooks.patch.image) ? kps.prometheusOperator.admissionWebhooks.patch.image : {}),
+                      }),
                     }),
                   }),
-                }),
-                "prometheus": (has(schema.spec.kubePrometheusStack.prometheus) ? schema.spec.kubePrometheusStack.prometheus : {}).merge({
-                  "prometheusSpec": (has(schema.spec.kubePrometheusStack.prometheus) && has(schema.spec.kubePrometheusStack.prometheus.prometheusSpec) ? schema.spec.kubePrometheusStack.prometheus.prometheusSpec : {}).merge({
-                    "image": {
-                      "registry": kpsPrometheusImage.status.additional.oci.registry,
-                      "repository": kpsPrometheusImage.status.additional.oci.repository,
-                      "tag": "v3.13.1-distroless@" + kpsPrometheusImage.status.additional.oci.digest,
-                    }.merge(has(schema.spec.kubePrometheusStack.prometheus) && has(schema.spec.kubePrometheusStack.prometheus.prometheusSpec) && has(schema.spec.kubePrometheusStack.prometheus.prometheusSpec.image) ? schema.spec.kubePrometheusStack.prometheus.prometheusSpec.image : {}),
+                  "prometheus": dyn(has(kps.prometheus) ? kps.prometheus : {}).merge({
+                    "prometheusSpec": dyn(has(kps.prometheus) && has(kps.prometheus.prometheusSpec) ? kps.prometheus.prometheusSpec : {}).merge({
+                      "image": dyn({
+                        "registry": kpsPrometheusImage.status.additional.oci.registry,
+                        "repository": kpsPrometheusImage.status.additional.oci.repository,
+                        "tag": "v3.13.1-distroless@" + kpsPrometheusImage.status.additional.oci.digest,
+                      }).merge(has(kps.prometheus) && has(kps.prometheus.prometheusSpec) && has(kps.prometheus.prometheusSpec.image) ? kps.prometheus.prometheusSpec.image : {}),
+                    }),
                   }),
-                }),
-                "alertmanager": (has(schema.spec.kubePrometheusStack.alertmanager) ? schema.spec.kubePrometheusStack.alertmanager : {}).merge({
-                  "alertmanagerSpec": (has(schema.spec.kubePrometheusStack.alertmanager) && has(schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec) ? schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec : {}).merge({
-                    "image": {
-                      "registry": kpsAlertmanagerImage.status.additional.oci.registry,
-                      "repository": kpsAlertmanagerImage.status.additional.oci.repository,
-                      "tag": "v0.33.1@" + kpsAlertmanagerImage.status.additional.oci.digest,
-                    }.merge(has(schema.spec.kubePrometheusStack.alertmanager) && has(schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec) && has(schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec.image) ? schema.spec.kubePrometheusStack.alertmanager.alertmanagerSpec.image : {}),
+                  "alertmanager": dyn(has(kps.alertmanager) ? kps.alertmanager : {}).merge({
+                    "alertmanagerSpec": dyn(has(kps.alertmanager) && has(kps.alertmanager.alertmanagerSpec) ? kps.alertmanager.alertmanagerSpec : {}).merge({
+                      "image": dyn({
+                        "registry": kpsAlertmanagerImage.status.additional.oci.registry,
+                        "repository": kpsAlertmanagerImage.status.additional.oci.repository,
+                        "tag": "v0.33.1@" + kpsAlertmanagerImage.status.additional.oci.digest,
+                      }).merge(has(kps.alertmanager) && has(kps.alertmanager.alertmanagerSpec) && has(kps.alertmanager.alertmanagerSpec.image) ? kps.alertmanager.alertmanagerSpec.image : {}),
+                    }),
                   }),
-                }),
-                "kube-state-metrics": (has(schema.spec.kubePrometheusStack["kube-state-metrics"]) ? schema.spec.kubePrometheusStack["kube-state-metrics"] : {}).merge({
-                  "image": {
-                    "registry": kpsKubeStateMetricsImage.status.additional.oci.registry,
-                    "repository": kpsKubeStateMetricsImage.status.additional.oci.repository,
-                    "tag": "v2.19.1@" + kpsKubeStateMetricsImage.status.additional.oci.digest,
-                  }.merge(has(schema.spec.kubePrometheusStack["kube-state-metrics"]) && has(schema.spec.kubePrometheusStack["kube-state-metrics"].image) ? schema.spec.kubePrometheusStack["kube-state-metrics"].image : {}),
-                }),
-              })
+                  "kube-state-metrics": dyn("kube-state-metrics" in kps ? kps["kube-state-metrics"] : {}).merge({
+                    "image": dyn({
+                      "registry": kpsKubeStateMetricsImage.status.additional.oci.registry,
+                      "repository": kpsKubeStateMetricsImage.status.additional.oci.repository,
+                      "tag": "v2.19.1@" + kpsKubeStateMetricsImage.status.additional.oci.digest,
+                    }).merge("kube-state-metrics" in kps && "image" in kps["kube-state-metrics"] ? kps["kube-state-metrics"].image : {}),
+                  }),
+                })
+              )
             }
 
     # ==========================================================
@@ -917,22 +919,22 @@ spec:
             name: ${agentgatewayOciRepository.metadata.name}
           values: |-
             ${
-              schema.spec.agentgateway.merge({
-                "inferenceExtension": {"enabled": true}.merge(has(schema.spec.agentgateway.inferenceExtension) ? schema.spec.agentgateway.inferenceExtension : {}),
+              dyn(schema.spec.agentgateway).merge({
+                "inferenceExtension": {"enabled": true}.merge(has(schema.spec.agentgateway.inferenceExtension) ? dyn(schema.spec.agentgateway.inferenceExtension) : {}),
                 "controller": {
                   "image": {
                     "registry": agentgatewayControllerImage.status.additional.oci.registry,
                     "repository": agentgatewayControllerImage.status.additional.oci.repository,
                     "tag": "v1.3.1@" + agentgatewayControllerImage.status.additional.oci.digest,
                   },
-                }.merge(has(schema.spec.agentgateway.controller) ? schema.spec.agentgateway.controller : {}),
+                }.merge(has(schema.spec.agentgateway.controller) ? dyn(schema.spec.agentgateway.controller) : {}),
                 "proxy": {
                   "image": {
                     "registry": agentgatewayProxyImage.status.additional.oci.registry,
                     "repository": agentgatewayProxyImage.status.additional.oci.repository,
                     "tag": "v1.3.1@" + agentgatewayProxyImage.status.additional.oci.digest,
                   },
-                }.merge(has(schema.spec.agentgateway.proxy) ? schema.spec.agentgateway.proxy : {}),
+                }.merge(has(schema.spec.agentgateway.proxy) ? dyn(schema.spec.agentgateway.proxy) : {}),
               })
             }
 
@@ -1034,7 +1036,7 @@ spec:
                   "repository": externalDnsImage.status.additional.oci.registry + "/" + externalDnsImage.status.additional.oci.repository,
                   "tag": "v0.19.0@" + externalDnsImage.status.additional.oci.digest,
                 },
-              }.merge(schema.spec.externalDns)
+              }.merge(dyn(schema.spec.externalDns))
             }
 
     # ==========================================================
@@ -1337,14 +1339,14 @@ spec:
                   "enabled": true,
                   "parentRefs": [{"name": "inference-gateway", "namespace": "thalamus"}],
                 },
-              }.merge(schema.spec.openWebui).merge({
-                "websocket": (has(schema.spec.openWebui.websocket) ? schema.spec.openWebui.websocket : {}).merge({
+              }.merge(dyn(schema.spec.openWebui)).merge({
+                "websocket": (has(schema.spec.openWebui.websocket) ? dyn(schema.spec.openWebui.websocket) : {}).merge({
                   "redis": {
                     "image": {
                       "repository": openWebuiRedisImage.status.additional.oci.registry + "/" + openWebuiRedisImage.status.additional.oci.repository,
                       "tag": "7.4.2-alpine3.21@" + openWebuiRedisImage.status.additional.oci.digest,
                     },
-                  }.merge(has(schema.spec.openWebui.websocket) && has(schema.spec.openWebui.websocket.redis) ? schema.spec.openWebui.websocket.redis : {}),
+                  }.merge(has(schema.spec.openWebui.websocket) && has(schema.spec.openWebui.websocket.redis) ? dyn(schema.spec.openWebui.websocket.redis) : {}),
                 }),
               })
             }
