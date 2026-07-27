@@ -12,7 +12,7 @@ metadata:
   namespace: thalamus
 spec:
   repositorySpec:
-    baseUrl: ghcr.io/skarlso/thalamus-transferred
+    baseUrl: keppel.eu-de-1.cloud.sap/thalamus/ocm-transferred
     type: OCIRegistry
   interval: 10m
 ---
