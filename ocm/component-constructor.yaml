@@ -2,8 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# Single-file variant: the root component and all building blocks it
+# references are defined together in this one constructor. One RGD on
+# the root orchestrates everything; the referenced components carry only
+# their charts.
 components:
-  - name: github.com/cobaltcore-dev/thalamus/thalamus
+  - name: github.com/cobaltcore-dev/thalamus
     version: 0.1.0
     provider:
       name: cobaltcore-dev
@@ -20,7 +24,7 @@ components:
         version: 0.1.0
         input:
           type: File/v1
-          path: ocm/deploy/rgds/thalamus.yaml
+          path: ocm-single-component/deploy/rgd.yaml
           mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
       - name: operator-image
         type: ociImage
@@ -34,6 +38,37 @@ components:
         access:
           type: ociArtifact
           imageReference: ghcr.io/llm-d/llm-d-router-endpoint-picker:v0.9.0
+    componentReferences:
+      - name: thalamus-crds
+        componentName: github.com/cobaltcore-dev/thalamus/thalamus-crds
+        version: 0.1.0
+      - name: gateway-api-crds
+        componentName: github.com/cobaltcore-dev/thalamus/gateway-api-crds
+        version: 1.5.1
+      - name: gateway-api-inference-extension-crds
+        componentName: github.com/cobaltcore-dev/thalamus/gateway-api-inference-extension-crds
+        version: 1.5.0
+      - name: node-feature-discovery
+        componentName: github.com/cobaltcore-dev/thalamus/node-feature-discovery
+        version: 0.19.0
+      - name: gpu-operator
+        componentName: github.com/cobaltcore-dev/thalamus/gpu-operator
+        version: v26.3.3
+      - name: kube-prometheus-stack
+        componentName: github.com/cobaltcore-dev/thalamus/kube-prometheus-stack
+        version: 87.15.1
+      - name: agentgateway-crds
+        componentName: github.com/cobaltcore-dev/thalamus/agentgateway-crds
+        version: v1.3.1
+      - name: agentgateway
+        componentName: github.com/cobaltcore-dev/thalamus/agentgateway
+        version: v1.3.1
+      - name: external-dns
+        componentName: github.com/cobaltcore-dev/thalamus/external-dns
+        version: 1.19.0
+      - name: open-webui
+        componentName: github.com/cobaltcore-dev/thalamus/open-webui
+        version: 15.2.0
 
   - name: github.com/cobaltcore-dev/thalamus/thalamus-crds
     version: 0.1.0
@@ -47,13 +82,6 @@ components:
           type: Helm/v1
           path: helm/thalamus-crds
           repository: charts/thalamus-crds:0.1.0
-      - name: thalamus-crds-rgd
-        type: blob
-        version: 0.1.0
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/thalamus-crds.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
 
   - name: github.com/cobaltcore-dev/thalamus/gateway-api-crds
     version: 1.5.1
@@ -67,13 +95,6 @@ components:
           type: Helm/v1
           path: helm/gateway-api
           repository: charts/gateway-api:1.5.1
-      - name: gateway-api-crds-rgd
-        type: blob
-        version: 1.5.1
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/gateway-api-crds.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
 
   - name: github.com/cobaltcore-dev/thalamus/gateway-api-inference-extension-crds
     version: 1.5.0
@@ -87,13 +108,6 @@ components:
           type: Helm/v1
           path: helm/gateway-api-inference-extension
           repository: charts/gateway-api-inference-extension:1.5.0
-      - name: gateway-api-inference-extension-crds-rgd
-        type: blob
-        version: 1.5.0
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/gateway-api-inference-extension-crds.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
 
   - name: github.com/cobaltcore-dev/thalamus/node-feature-discovery
     version: 0.19.0
@@ -107,13 +121,6 @@ components:
           type: Helm/v1
           helmRepository: oci://registry.k8s.io/nfd/charts/node-feature-discovery:0.19.0
           repository: charts/node-feature-discovery:0.19.0
-      - name: node-feature-discovery-rgd
-        type: blob
-        version: 0.19.0
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/node-feature-discovery.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
       - name: node-feature-discovery-image
         type: ociImage
         version: v0.19.0
@@ -133,13 +140,6 @@ components:
           type: Helm/v1
           helmRepository: https://helm.ngc.nvidia.com/nvidia/charts/gpu-operator-v26.3.3.tgz
           repository: charts/gpu-operator:v26.3.3
-      - name: gpu-operator-rgd
-        type: blob
-        version: v26.3.3
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/gpu-operator.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
 
   - name: github.com/cobaltcore-dev/thalamus/kube-prometheus-stack
     version: 87.15.1
@@ -153,13 +153,6 @@ components:
           type: Helm/v1
           helmRepository: oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack:87.15.1
           repository: charts/kube-prometheus-stack:87.15.1
-      - name: kube-prometheus-stack-rgd
-        type: blob
-        version: 87.15.1
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/kube-prometheus-stack.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
       - name: prometheus-operator-image
         type: ociImage
         version: v0.92.1
@@ -215,13 +208,6 @@ components:
           type: Helm/v1
           helmRepository: oci://cr.agentgateway.dev/charts/agentgateway-crds:v1.3.1
           repository: charts/agentgateway-crds:v1.3.1
-      - name: agentgateway-crds-rgd
-        type: blob
-        version: v1.3.1
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/agentgateway-crds.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
 
   - name: github.com/cobaltcore-dev/thalamus/agentgateway
     version: v1.3.1
@@ -235,13 +221,6 @@ components:
           type: Helm/v1
           helmRepository: oci://cr.agentgateway.dev/charts/agentgateway:v1.3.1
           repository: charts/agentgateway:v1.3.1
-      - name: agentgateway-rgd
-        type: blob
-        version: v1.3.1
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/agentgateway.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
       - name: controller-image
         type: ociImage
         version: v1.3.1
@@ -267,13 +246,6 @@ components:
           type: Helm/v1
           helmRepository: https://github.com/kubernetes-sigs/external-dns/releases/download/external-dns-helm-chart-1.19.0/external-dns-1.19.0.tgz
           repository: charts/external-dns:1.19.0
-      - name: external-dns-rgd
-        type: blob
-        version: 1.19.0
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/external-dns.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
       - name: external-dns-image
         type: ociImage
         version: v0.19.0
@@ -293,13 +265,6 @@ components:
           type: Helm/v1
           helmRepository: https://helm.openwebui.com/open-webui-15.2.0.tgz
           repository: charts/open-webui:15.2.0
-      - name: open-webui-rgd
-        type: blob
-        version: 15.2.0
-        input:
-          type: File/v1
-          path: ocm/deploy/rgds/open-webui.yaml
-          mediaType: application/vnd.cncf.kro.resourcegraphdefinition.v1+yaml
       - name: open-webui-image
         type: ociImage
         version: 0.10.2
