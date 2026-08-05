@@ -41,3 +41,7 @@ jobs:
         run: |
           set -eux
           make lint
+      - name: Run tests
+        run: |
+          set -eux
+          make test

@@ -1,8 +1,29 @@
-{{- range .Values.extraDeploy }}
+{{- $items := list }}
+{{- if kindIs "map" .Values.extraDeploy }}
+  {{- range $name, $value := .Values.extraDeploy }}
+    {{- $items = append $items (dict "name" $name "value" $value) }}
+  {{- end }}
+{{- else if .Values.extraDeploy }}
+  {{- range .Values.extraDeploy }}
+    {{- $items = append $items (dict "value" .) }}
+  {{- end }}
+{{- end }}
+{{- range $items }}
 ---
-{{- if typeIs "string" . }}
-  {{- tpl . $ }}
+{{- $value := .value }}
+{{- if not $value }}
+  {{- $entryName := .name | default "<anonymous list entry>" }}
+  {{- fail (printf "extraDeploy entry %q has no content" $entryName) }}
+{{- end }}
+{{- if typeIs "string" $value }}
+  {{- tpl $value $ }}
 {{- else }}
-  {{- tpl (toYaml .) $ }}
+  {{- $obj := deepCopy $value }}
+  {{- $metadata := $obj.metadata | default dict }}
+  {{- if and (hasKey . "name") (not (hasKey $metadata "name")) }}
+    {{- $_ := set $metadata "name" .name }}
+  {{- end }}
+  {{- $_ := set $obj "metadata" $metadata }}
+  {{- tpl (toYaml $obj) $ }}
 {{- end }}
 {{- end }}
