@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: aggregated-models
+  name: model-list
   namespace: {{ .Release.Namespace }}
 spec:
   parentRefs:
@@ -23,14 +23,15 @@ spec:
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayPolicy
 metadata:
-  name: aggregated-models
+  name: model-list
   namespace: {{ .Release.Namespace }}
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: aggregated-models
+      name: model-list
   traffic:
+    {{- if not .Values.operator.enabled }}
     directResponse:
       status: 200
       body: |
@@ -46,6 +47,11 @@ spec:
             {{- end }}
           ]
         }
+    {{- else }}
+    directResponse:
+      status: 200
+      body: '{"object":"list","data":[]}'
+    {{- end }}
     headerModifiers:
       response:
         set:
