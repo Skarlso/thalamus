@@ -30,6 +30,21 @@ const (
 	ModelConditionReady = "Ready"
 )
 
+type ModelReason string
+
+const (
+	ModelReasonReady                     ModelReason = "Ready"
+	ModelReasonEngineNotReady            ModelReason = "EngineNotReady"
+	ModelReasonEngineDeploymentFailed    ModelReason = "EngineDeploymentFailed"
+	ModelReasonEPPNotReady               ModelReason = "EPPNotReady"
+	ModelReasonEPPDeploymentFailed       ModelReason = "EPPDeploymentFailed"
+	ModelReasonInferencePoolNotAccepted  ModelReason = "InferencePoolNotAccepted"
+	ModelReasonInferencePoolRejected     ModelReason = "InferencePoolRejected"
+	ModelReasonHTTPRouteNotAccepted      ModelReason = "HTTPRouteNotAccepted"
+	ModelReasonHTTPRouteRejected         ModelReason = "HTTPRouteRejected"
+	ModelReasonHTTPRoutePartiallyInvalid ModelReason = "HTTPRoutePartiallyInvalid"
+)
+
 // +kubebuilder:validation:Enum=native;kserve;kaito
 type BackendType string
 
