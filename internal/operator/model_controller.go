@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -65,7 +67,7 @@ func (r *ModelReconciler) reconcileKAITO(_ context.Context, _ *v1alpha1.Model) e
 	return errors.New("kaito backend is not yet implemented")
 }
 
-// reconcileNative creates or updates all child resources for the native backend.
+// reconcileNative creates, updates, or deletes all child resources for the native backend.
 func (r *ModelReconciler) reconcileNative(ctx context.Context, model *v1alpha1.Model) error {
 	// Engine stack.
 	objs := []client.Object{
@@ -85,12 +87,33 @@ func (r *ModelReconciler) reconcileNative(ctx context.Context, model *v1alpha1.M
 		native.BuildEPPService(model),
 	)
 
+	if model.Spec.Replicas == 0 {
+		// Delete in reverse order so consumers are removed before their dependencies.
+		for _, obj := range slices.Backward(objs) {
+			if err := r.deleteOwned(ctx, model, obj); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	for _, obj := range objs {
 		if err := r.applyOwned(ctx, model, obj); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// deleteOwned removes desired if it exists and is controlled by owner.
+func (r *ModelReconciler) deleteOwned(ctx context.Context, owner *v1alpha1.Model, desired client.Object) error {
+	if err := r.Get(ctx, types.NamespacedName{Name: desired.GetName(), Namespace: desired.GetNamespace()}, desired); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+	if !metav1.IsControlledBy(desired, owner) {
+		return fmt.Errorf("refusing to delete %T %s/%s: not owned by model %s", desired, desired.GetNamespace(), desired.GetName(), owner.Name)
+	}
+	return client.IgnoreNotFound(r.Delete(ctx, desired))
 }
 
 // applyOwned sets an owner reference on obj then applies it via Server-Side Apply.
