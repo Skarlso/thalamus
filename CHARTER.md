@@ -14,7 +14,7 @@ This Technical Charter (the "Charter") sets forth the responsibilities and proce
 ## 1. Mission
 
 The mission of Thalamus is to provide a vendor-neutral, Kubernetes-native inference service for sovereign LLM deployments, ensuring that model weights, prompts, and context remain protected and within the deployment perimeter. 
-Thalamus integrates natively with CobaltCore, Greenhouse, and the broader ApeiroRA ecosystem, and supports Nvidia, AMD, and Intel infrastructure.
+Thalamus integrates natively with CobaltCore, Greenhouse, and the broader NeoNephos ecosystem, and supports Nvidia, AMD, and Intel infrastructure.
 
 ## 2. Technical Steering Committee
 
