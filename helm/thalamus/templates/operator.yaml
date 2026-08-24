@@ -1,3 +1,4 @@
+{{- $metricsEnabled := dig "enabled" .Values.monitoring.enabled (.Values.monitoring.operator | default dict) }}
 {{- if gt (int .Values.operator.replicas) 1 }}
 {{- fail "operator.replicas > 1 is not supported: the operator has no leader election" }}
 {{- end }}
@@ -69,6 +70,24 @@ roleRef:
   name: {{ include "thalamus.operator.name" . }}
 {{- end }}
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "thalamus.operator.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "thalamus.operator.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "thalamus.operator.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: metrics
+    - name: health
+      port: 8081
+      targetPort: health
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -97,7 +116,7 @@ spec:
           args:
             - --health-probe-bind-address=:8081
             - --namespace={{ .Release.Namespace }}
-            {{- if .Values.operator.metrics.enabled }}
+            {{- if $metricsEnabled }}
             - --metrics-bind-address=:8080
             {{- end }}
           {{- with .Values.operator.resources }}
@@ -109,7 +128,7 @@ spec:
           ports:
             - name: health
               containerPort: 8081
-            {{- if .Values.operator.metrics.enabled }}
+            {{- if $metricsEnabled }}
             - name: metrics
               containerPort: 8080
             {{- end }}
