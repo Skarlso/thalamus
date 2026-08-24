@@ -3,10 +3,9 @@ layout: home
 
 hero:
   name: Thalamus
-  text: Kubernetes-Native LLM Inference
+  text: Sovereign AI Infrastructure
   tagline: >
-    A vendor-neutral, Kubernetes-native inference service based on llm-d,
-    the Gateway API inference extension, and Cortex.
+    A sovereign, vendor-neutral, and Kubernetes-native inference service based on vLLM, llm-d, the Gateway API inference extension, and Cortex.
   image:
     src: https://raw.githubusercontent.com/cobaltcore-dev/thalamus/main/docs/assets/logo/Thalamus_Logo_black.svg
     alt: CobaltCore
