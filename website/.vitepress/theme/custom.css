@@ -108,3 +108,125 @@ html {
 .mermaid-fade-enter-from .mermaid-zoom-container {
   transform: scale(0.92);
 }
+
+/* Footer */
+@media (min-width: 960px) {
+  .thalamus-footer.has-sidebar,
+  .Layout:has(.VPContent.has-sidebar) .thalamus-footer {
+    padding-left: var(--vp-sidebar-width, 272px);
+  }
+}
+@media (min-width: 1440px) {
+  .thalamus-footer.has-sidebar,
+  .Layout:has(.VPContent.has-sidebar) .thalamus-footer {
+    padding-left: calc((100vw - var(--vp-layout-max-width, 1280px)) / 2 + var(--vp-sidebar-width, 272px));
+  }
+}
+
+.thalamus-footer {
+  border-top: 1px solid var(--vp-c-divider);
+  padding: 32px 24px 24px;
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+}
+
+.footer-container {
+  max-width: var(--vp-layout-max-width, 1280px);
+  margin: 0 auto;
+}
+
+.footer-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.funding-notice {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 280px;
+  max-width: 680px;
+}
+
+.funding-image-container {
+  flex-shrink: 0;
+}
+
+.funding-image-src {
+  height: 72px;
+  width: auto;
+}
+
+.funding-text p {
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.funding-text p:last-child {
+  margin-bottom: 0;
+}
+
+.neonephos-logo-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.neonephos-logo {
+  height: 40px;
+  width: auto;
+}
+
+.dark .neonephos-logo-light { display: none; }
+.dark .neonephos-logo-dark  { display: block; }
+.neonephos-logo-dark        { display: none; }
+.neonephos-logo-light       { display: block; }
+
+.footer-bottom {
+  margin-bottom: 20px;
+}
+
+.copyright p {
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.copyright p:last-child {
+  margin-bottom: 0;
+}
+
+.copyright a {
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+}
+
+.copyright a:hover {
+  text-decoration: underline;
+}
+
+.footer-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.footer-legal-links a {
+  color: var(--vp-c-text-2);
+  text-decoration: none;
+}
+
+.footer-legal-links a:hover {
+  color: var(--vp-c-brand-1);
+}
+
+.footer-legal-links .sep {
+  color: var(--vp-c-divider);
+}

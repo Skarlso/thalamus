@@ -39,7 +39,7 @@ features:
   - icon: 🏗️
     title: Architecture
     details: >
-      Built on llm-d, the Gateway API inference extension, and Cortex.
+      Built on vLLM, llm-d, the Gateway API inference extension, OCM, and Cortex.
       Learn how the components fit together.
     link: /concepts/architecture
     linkText: Architecture overview
