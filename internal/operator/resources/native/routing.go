@@ -13,6 +13,7 @@ import (
 
 const (
 	defaultGatewayName         = "inference-gateway"
+	defaultGatewaySectionName  = "api"
 	gatewayBaseModelHeaderName = "X-Gateway-Base-Model-Name"
 )
 
@@ -61,8 +62,9 @@ func BuildHTTPRoute(model *v1alpha1.Model) *gatewayv1.HTTPRoute {
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
 					{
-						Name:      defaultGatewayName,
-						Namespace: new(gatewayv1.Namespace(model.Namespace)),
+						Name:        defaultGatewayName,
+						Namespace:   new(gatewayv1.Namespace(model.Namespace)),
+						SectionName: new(gatewayv1.SectionName(defaultGatewaySectionName)),
 					},
 				},
 			},
