@@ -48,6 +48,10 @@ jobs:
           helm-plugins: >
             https://github.com/databus23/helm-diff@v3.9.14
 
+      - name: Install uv
+        if: matrix.name == 'model'
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+
       - name: Create namespace
         run: |
           kubectl create namespace thalamus
@@ -101,10 +105,10 @@ jobs:
       - name: Run e2e validation
         if: matrix.name == 'model'
         env:
+          GATEWAY_HOST: localhost
+          GATEWAY_PORT: "8080"
           MODEL: HuggingFaceTB/SmolLM2-135M-Instruct
-          MAX_RETRIES: "6"
-          RETRY_INTERVAL: "5"
-        run: bash test/e2e/validate.sh
+        run: uv run test/e2e/validate.py
 
       - name: Debug on failure
         if: failure()
