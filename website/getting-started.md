@@ -8,6 +8,10 @@ Thalamus is a vendor-neutral, Kubernetes-native inference service based on
 [llm-d](https://llm-d.ai/), the [Gateway API inference extension](https://github.com/kubernetes-sigs/gateway-api-inference-extension),
 and [Cortex](https://github.com/cobaltcore-dev/cortex).
 
+Inference instances are declared as [`thalamus.cloud/v1alpha1 Model`](/reference/model-crd-api) resources.
+The Thalamus operator reconciles each `Model` into the required engine, endpoint
+picker, routing, and service resources.
+
 ## Prerequisites
 
 ### Tools
@@ -30,7 +34,7 @@ with your Hugging Face token in the `thalamus` namespace:
 kubectl create namespace thalamus
 ```
 
-Then create the secret. The chart expects a secret named `hf-token` with key `HF_TOKEN`.
+Then create the secret. The operator expects a secret named `hf-token` with key `HF_TOKEN`.
 
 ```bash
 kubectl create secret generic hf-token \
@@ -120,12 +124,12 @@ To preview changes before applying, use `helmfile diff` in place of `apply`.
 ## Step 4 — Deploy a model
 
 Models are declared as `thalamus.cloud/v1alpha1 Model` resources and applied
-independently of the helm release. See [`helm/model.yaml`](https://raw.githubusercontent.com/cobaltcore-dev/thalamus/@@DOCS_VERSION@@/helm/model.yaml)
-for a GPU example and [`helm/model.cpu.yaml`](https://raw.githubusercontent.com/cobaltcore-dev/thalamus/@@DOCS_VERSION@@/helm/model.cpu.yaml) for a
+independently of the helm release. See [`examples/model-qwen3-6-27b-gpu.yaml`](https://raw.githubusercontent.com/cobaltcore-dev/thalamus/@@DOCS_VERSION@@/examples/model-qwen3-6-27b-gpu.yaml)
+for a GPU example and [`examples/model-smollm2-cpu.yaml`](https://raw.githubusercontent.com/cobaltcore-dev/thalamus/@@DOCS_VERSION@@/examples/model-smollm2-cpu.yaml) for a
 CPU example.
 
 ```bash
-kubectl apply -f helm/model.yaml
+kubectl apply -f examples/model-qwen3-6-27b-gpu.yaml
 ```
 
 Wait for the model to become ready:
@@ -133,6 +137,26 @@ Wait for the model to become ready:
 ```bash
 kubectl wait model/qwen3-6-27b --namespace thalamus --for=condition=Ready --timeout=600s
 ```
+
+::: details GPU example manifest
+<<< ../examples/model-qwen3-6-27b-gpu.yaml{yml}
+:::
+
+For a CPU-only or local development setup, use the SmolLM2 example:
+
+```bash
+kubectl apply -f examples/model-smollm2-cpu.yaml
+```
+
+Wait for the model to become ready:
+
+```bash
+kubectl wait model/smollm2-135m --namespace thalamus --for=condition=Ready --timeout=600s
+```
+
+::: details CPU example manifest
+<<< ../examples/model-smollm2-cpu.yaml{yml}
+:::
 
 ## Step 5 — Access the stack
 
@@ -177,7 +201,7 @@ helmfile --file helm/helmfile.yaml.gotmpl apply \
   --state-values-set node-feature-discovery.enabled=false \
   --state-values-set gpu-operator.enabled=false
 
-kubectl apply -f helm/model.cpu.yaml
+kubectl apply -f examples/model-smollm2-cpu.yaml
 ```
 
 > **Note:** The CPU image has no Apple Silicon / Metal acceleration. Inference
@@ -194,4 +218,6 @@ kubectl apply -f helm/model.cpu.yaml
 ## Next Steps
 
 - Browse the [Model CRD API Reference](/reference/model-crd-api) for all available fields.
-- Read about the [planned architecture](/concepts/architecture).
+- Read the [Architecture overview](/concepts/architecture) to understand how the
+  operator, gateway, and endpoint picker fit together.
+- Watch the [Demo](/demo) for a visual walkthrough.
