@@ -43,7 +43,7 @@ jobs:
       - name: Install helmfile
         uses: helmfile/helmfile-action@v2.4.7
         with:
-          helmfile-version: v1.6.0
+          helmfile-version: v1.7.4
           helm-version: v3.17.3
           helm-plugins: >
             https://github.com/databus23/helm-diff@v3.9.14
@@ -69,7 +69,7 @@ jobs:
         working-directory: helm
         run: |
           helmfile --file helmfile.yaml.gotmpl apply \
-            --skip-diff-on-install \
+            --skip-diff-validation-on-install \
             --wait=true \
             --timeout=600 \
             ${{ matrix.name == 'model' && format('--state-values-file {0}/test/e2e/values.yaml', github.workspace) || '' }} \
