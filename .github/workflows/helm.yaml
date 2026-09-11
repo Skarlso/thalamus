@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: Copyright 2026 SAP SE or an SAP affiliate company and cobaltcore-dev contributors
+# SPDX-License-Identifier: Apache-2.0
+
+name: Helm Charts
+
+"on":
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - '*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint (${{ matrix.chart }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: [thalamus, thalamus-crds]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.21.4
+
+      - name: Lint
+        run: helm lint helm/${{ matrix.chart }}
+
+  publish:
+    name: Publish (${{ matrix.chart }})
+    if: github.event_name != 'pull_request'
+    needs: lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: [thalamus, thalamus-crds]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.22.0
+
+      # Same tag strategy as the Docker workflow, so chart tags match image tags.
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Helm login to ghcr.io
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+      # Tags that are not valid semver (branch, latest, SHA) are published as
+      # 0.0.0-<tag> so they remain selectable via --version.
+      - name: Package and push chart
+        run: |
+          set -euo pipefail
+          dist="$(mktemp -d)"
+          trap 'rm -rf "${dist}"' EXIT
+          while IFS= read -r tag; do
+            if [[ "${tag}" =~ ^v?[0-9]+(\.[0-9]+){0,2}([+-][0-9A-Za-z.-]+)?$ ]]; then
+              version="${tag}"
+            else
+              version="0.0.0-${tag}"
+            fi
+            helm package "helm/${{ matrix.chart }}" -d "${dist}" \
+              --version "${version}" --app-version "${tag}"
+            helm push "${dist}/${{ matrix.chart }}-${version}.tgz" \
+              "oci://ghcr.io/${{ github.repository_owner }}/charts"
+            echo "Pushed oci://ghcr.io/${{ github.repository_owner }}/charts/${{ matrix.chart }}:${version} (appVersion ${tag})"
+          done <<< "${{ steps.meta.outputs.tags }}"
