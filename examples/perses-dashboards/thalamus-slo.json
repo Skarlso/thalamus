@@ -1,0 +1,734 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "thalamus_slo",
+    "project": "thalamus"
+  },
+  "spec": {
+    "display": {
+      "name": "Thalamus SLO"
+    },
+    "variables": [
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "display": {
+            "name": "Rate Interval",
+            "hidden": false
+          },
+          "value": "15m",
+          "name": "rate_interval"
+        }
+      }
+    ],
+    "panels": {
+      "readme": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "README"
+          },
+          "plugin": {
+            "kind": "Markdown",
+            "spec": {
+              "text": "# Thalamus SLO\n\nUser-facing latency for vLLM serving in `thalamus` — what to watch during an incident: are users getting fast tokens, is the fleet healthy, is anything queued?\n\nAll latency panels are per-model and split into **p50** (median) and **p99** (worst 1%). For deep diagnosis use the Debug dashboards.\n\n## Variables\n\n- `rate_interval` controls the smoothing window for histogram rates. Shorter windows expose bursts; longer windows smooth sparse traffic."
+            }
+          }
+        }
+      },
+      "ttft_p50": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "TTFT p50",
+            "description": "Time to first token for the median streaming request."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.50, sum by (target_model_name, le) (rate(llm_d_epp_request_ttft_seconds_bucket{streaming=\"true\"}[$rate_interval])))",
+                    "seriesNameFormat": "{{target_model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "ttft_p99": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "TTFT p99",
+            "description": "Time to first token for the slowest 1% of streaming requests."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.99, sum by (target_model_name, le) (rate(llm_d_epp_request_ttft_seconds_bucket{streaming=\"true\"}[$rate_interval])))",
+                    "seriesNameFormat": "{{target_model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "tpot_p50": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "TPOT p50",
+            "description": "Median gap between consecutive output tokens during decode."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.50, sum by (model_name, le) (rate(vllm:inter_token_latency_seconds_bucket[$rate_interval])))",
+                    "seriesNameFormat": "{{model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "tpot_p99": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "TPOT p99",
+            "description": "Gap between consecutive output tokens for the slowest 1% of requests."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.99, sum by (model_name, le) (rate(vllm:inter_token_latency_seconds_bucket[$rate_interval])))",
+                    "seriesNameFormat": "{{model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "e2e_p50": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "E2E p50",
+            "description": "Median total time from request arrival to the last token."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.50, sum by (target_model_name, le) (rate(llm_d_epp_request_duration_seconds_bucket[$rate_interval])))",
+                    "seriesNameFormat": "{{target_model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "e2e_p99": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "E2E p99",
+            "description": "Total time for the slowest 1% of requests."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.99, sum by (target_model_name, le) (rate(llm_d_epp_request_duration_seconds_bucket[$rate_interval])))",
+                    "seriesNameFormat": "{{target_model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "itl_p50": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ITL p50",
+            "description": "Median gap between consecutive streamed tokens."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.50, sum by (target_model_name, le) (rate(llm_d_epp_request_streaming_itl_seconds_bucket[$rate_interval])))",
+                    "seriesNameFormat": "{{target_model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "itl_p99": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "ITL p99",
+            "description": "Slowest 1% of gaps between streamed tokens; exposes streaming jitter."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.1,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "seconds"
+                },
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "histogram_quantile(0.99, sum by (target_model_name, le) (rate(llm_d_epp_request_streaming_itl_seconds_bucket[$rate_interval])))",
+                    "seriesNameFormat": "{{target_model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "queue_depth": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Queue Depth",
+            "description": "Requests waiting in the vLLM scheduler; a leading indicator of TTFT breaches."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.2,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                },
+                "label": "count",
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "sum by (model_name) (vllm:num_requests_waiting)",
+                    "seriesNameFormat": "{{model_name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "ready_endpoints": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Ready Endpoints",
+            "description": "Endpoints the endpoint picker (EPP) considers ready, per pool."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "visual": {
+                "areaOpacity": 0.2,
+                "connectNulls": false,
+                "display": "line",
+                "lineStyle": "solid",
+                "lineWidth": 1.5,
+                "pointRadius": 2
+              },
+              "yAxis": {
+                "format": {
+                  "unit": "decimal"
+                },
+                "label": "endpoints",
+                "min": 0,
+                "show": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "sum by (name) (llm_d_epp_ready_endpoints)",
+                    "seriesNameFormat": "{{name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "time_to_ready": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Time to Ready",
+            "description": "Seconds from pod creation to Ready, per vLLM pod."
+          },
+          "plugin": {
+            "kind": "Table",
+            "spec": {
+              "density": "compact",
+              "defaultColumnHidden": true,
+              "columnSettings": [
+                {
+                  "name": "pod",
+                  "header": "Pod",
+                  "hide": false
+                },
+                {
+                  "name": "value",
+                  "header": "Startup (s)",
+                  "hide": false,
+                  "align": "right",
+                  "format": {
+                    "unit": "seconds"
+                  }
+                },
+                {
+                  "name": "timestamp",
+                  "hide": true
+                }
+              ],
+              "transforms": [
+                {
+                  "kind": "MergeSeries",
+                  "spec": {}
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "datasource": {
+                      "kind": "PrometheusDatasource"
+                    },
+                    "query": "kube_pod_status_ready_time{namespace=\"thalamus\", pod=~\".*engine-.*\"} - kube_pod_created{namespace=\"thalamus\", pod=~\".*engine-.*\"}",
+                    "seriesNameFormat": "{{pod}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "README",
+            "collapse": {
+              "open": false
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/readme"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/ttft_p50"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/ttft_p99"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/tpot_p50"
+              }
+            },
+            {
+              "x": 18,
+              "y": 0,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/tpot_p99"
+              }
+            },
+            {
+              "x": 0,
+              "y": 13,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/e2e_p50"
+              }
+            },
+            {
+              "x": 6,
+              "y": 13,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/e2e_p99"
+              }
+            },
+            {
+              "x": 12,
+              "y": 13,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/itl_p50"
+              }
+            },
+            {
+              "x": 18,
+              "y": 13,
+              "width": 6,
+              "height": 10,
+              "content": {
+                "$ref": "#/spec/panels/itl_p99"
+              }
+            },
+            {
+              "x": 0,
+              "y": 26,
+              "width": 8,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/queue_depth"
+              }
+            },
+            {
+              "x": 8,
+              "y": 26,
+              "width": 8,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/ready_endpoints"
+              }
+            },
+            {
+              "x": 16,
+              "y": 26,
+              "width": 8,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/time_to_ready"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "30s"
+  }
+}
