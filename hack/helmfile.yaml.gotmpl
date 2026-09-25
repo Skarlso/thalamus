@@ -1,11 +1,14 @@
+# Dev convenience only; no official install method (see website/getting-started.md)
+# Requires `helm dependency build helm/thalamus helm/thalamus-crds`; CRDs/agentgateway are standalone releases (bundled copies disabled).
+
 releases:
   - name: gateway-api-crds
     namespace: default
-    chart: ./gateway-api
+    chart: ../helm/gateway-api
 
   - name: gateway-api-inference-extension-crds
     namespace: default
-    chart: ./gateway-api-inference-extension
+    chart: ../helm/gateway-api-inference-extension
 
   - name: node-feature-discovery
     namespace: node-feature-discovery
@@ -80,16 +83,27 @@ releases:
   - name: thalamus-crds
     namespace: thalamus
     createNamespace: true
-    chart: ./thalamus-crds
+    chart: ../helm/thalamus-crds
+    values:
+      - gateway-api:
+          enabled: false
+        gateway-api-inference-extension:
+          enabled: false
+        agentgateway-crds:
+          enabled: false
+      - {{ dig "thalamus-crds" dict .Values | toYaml | nindent 10 }}
+
 
   - name: thalamus
-    chart: ./thalamus
+    chart: ../helm/thalamus
     namespace: thalamus
     createNamespace: true
     needs:
       - thalamus/thalamus-crds
       - agentgateway-system/agentgateway
     values:
+      - agentgateway:
+          enabled: false
       {{- if (dig "open-webui" "enabled" true .Values) }}
       - gateway:
           listeners:

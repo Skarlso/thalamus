@@ -39,7 +39,9 @@ jobs:
           version: v3.22.0
 
       - name: Lint
-        run: helm lint helm/${{ matrix.chart }}
+        run: |
+          helm dependency build helm/${{ matrix.chart }}
+          helm lint helm/${{ matrix.chart }}
 
   publish:
     name: Publish (${{ matrix.chart }})
@@ -85,6 +87,7 @@ jobs:
           set -euo pipefail
           dist="$(mktemp -d)"
           trap 'rm -rf "${dist}"' EXIT
+          helm dependency build helm/${{ matrix.chart }}
           while IFS= read -r tag; do
             if [[ "${tag}" =~ ^v?[0-9]+(\.[0-9]+){0,2}([+-][0-9A-Za-z.-]+)?$ ]]; then
               version="${tag}"

@@ -20,15 +20,9 @@ concurrency:
 
 jobs:
   e2e:
-    name: E2E (${{ matrix.name }})
+    name: E2E
     runs-on: large_runner_16core_64gb
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: model
-          - name: components
 
     steps:
       - name: Check out code
@@ -40,24 +34,13 @@ jobs:
           cluster_name: thalamus
           node_image: kindest/node:v1.31.12
 
-      - name: Install helmfile
-        uses: helmfile/helmfile-action@v2.4.7
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
         with:
-          helmfile-version: v1.7.4
-          helm-version: v3.17.3
-          helm-plugins: >
-            https://github.com/databus23/helm-diff@v3.9.14
+          version: v3.22.0
 
       - name: Install uv
-        if: matrix.name == 'model'
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
-
-      - name: Create namespace
-        run: |
-          kubectl create namespace thalamus
-          kubectl create secret generic hf-token \
-            --namespace thalamus \
-            --from-literal=HF_TOKEN=${{ secrets.HF_TOKEN }}
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Build and load operator image
         run: |
@@ -65,45 +48,68 @@ jobs:
           kind load docker-image ghcr.io/cobaltcore-dev/thalamus:pr \
             --name thalamus
 
+      - name: Deploy CRDs
+        working-directory: helm
+        run: |
+          helm dependency build thalamus-crds
+          helm upgrade --install thalamus-crds ./thalamus-crds \
+            --namespace thalamus \
+            --create-namespace \
+            --wait \
+            --timeout=600s
+
+      - name: Verify CRDs
+        run: |
+          kubectl wait \
+            --for=condition=Established \
+            --timeout=120s \
+            crd/gateways.gateway.networking.k8s.io \
+            crd/httproutes.gateway.networking.k8s.io \
+            crd/inferencepools.inference.networking.k8s.io \
+            crd/agentgatewaypolicies.agentgateway.dev \
+            crd/models.thalamus.cloud
+
       - name: Deploy Thalamus
         working-directory: helm
         run: |
-          helmfile --file helmfile.yaml.gotmpl apply \
-            --skip-diff-validation-on-install \
-            --wait=true \
-            --timeout=600 \
-            ${{ matrix.name == 'model' && format('--state-values-file {0}/test/e2e/values.yaml', github.workspace) || '' }} \
-            --state-values-set thalamus.operator.image.tag=pr
+          helm dependency build thalamus
+          helm upgrade --install thalamus ./thalamus \
+            --namespace thalamus \
+            --wait \
+            --timeout=600s \
+            --set operator.image.tag=pr
 
-      - name: Wait for gateway
+      - name: Wait for Gateway
         run: |
           kubectl wait gateway/inference-gateway \
             --namespace thalamus \
             --for=condition=Programmed=True \
             --timeout=120s
 
-      - name: Apply Model CR
-        if: matrix.name == 'model'
+      - name: Create huggingface Secret
+        run: |
+          kubectl create secret generic hf-token \
+            --namespace thalamus \
+            --from-literal=HF_TOKEN=${{ secrets.HF_TOKEN }}
+
+      - name: Apply Model
         run: |
           kubectl apply -f ${{ github.workspace }}/examples/model-smollm2-cpu.yaml
 
-      - name: Wait for model readiness
-        if: matrix.name == 'model'
+      - name: Wait for Model readiness
         run: |
           kubectl wait model/smollm2-135m \
             --namespace thalamus \
             --for=condition=Ready \
             --timeout=600s
 
-      - name: Port-forward gateway
-        if: matrix.name == 'model'
+      - name: Port-forward Gateway
         run: |
           kubectl port-forward svc/inference-gateway \
             8080:80 --namespace thalamus &
           sleep 3
 
       - name: Run e2e validation
-        if: matrix.name == 'model'
         env:
           GATEWAY_HOST: localhost
           GATEWAY_PORT: "8080"

@@ -5,7 +5,7 @@ description: Post a component-level changelog summary for external Helm chart bu
 
 # Helm Changelog Commenter
 
-You analyze a Renovate PR that bumps external Helm chart versions in `helm/helmfile.yaml.gotmpl`.
+You analyze a Renovate PR that bumps external Helm chart versions in the `dependencies` blocks of `helm/thalamus/Chart.yaml` or `helm/thalamus-crds/Chart.yaml`.
 Helm chart repositories usually publish only packaging release notes, so your job is to find the **components** (the chart's `appVersion` and any changed subchart dependencies) that were bumped **inside** each chart and report the changelogs of **those components**, plus breaking-change warnings.
 
 ## Input
@@ -20,9 +20,9 @@ Helm chart repositories usually publish only packaging release notes, so your jo
 2. Load the PR:
    - `gh pr view <PR> --json number,title,body,state,headRefName,baseRefName`
    - `gh pr diff <PR>`
-3. Identify external Helm chart version bumps in `helm/helmfile.yaml.gotmpl`. For each changed release, capture:
-   - release name
-   - chart reference (e.g. `open-webui/open-webui` or `oci://.../gpu-operator`)
+3. Identify external Helm chart version bumps in `helm/thalamus/Chart.yaml` and `helm/thalamus-crds/Chart.yaml`. Skip `file://` dependencies (vendored local charts). For each changed external dependency, capture:
+   - parent chart (`thalamus` or `thalamus-crds`)
+   - chart reference (e.g. `oci://cr.agentgateway.dev/charts/agentgateway`)
    - repository URL
    - old version
    - new version
