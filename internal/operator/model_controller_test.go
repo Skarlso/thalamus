@@ -25,6 +25,7 @@ import (
 )
 
 const testNamespace = "default"
+const testGatewayName = "test-gateway"
 
 // reconcileModelOnce runs a single reconciliation for the named Model and fails
 // the test if Reconcile returns an error.
@@ -48,12 +49,12 @@ func newTestReconciler(t *testing.T, objs ...client.Object) (*ModelReconciler, c
 		WithObjects(objs...).
 		WithStatusSubresource(&v1alpha1.Model{}, &appsv1.Deployment{}, &inferencev1.InferencePool{}, &gatewayv1.HTTPRoute{}).
 		Build()
-	return &ModelReconciler{Client: c, Scheme: s}, c
+	return &ModelReconciler{Client: c, Scheme: s, GatewayName: testGatewayName}, c
 }
 
 func TestReconcile_NotFound(t *testing.T) {
 	s := testutil.NewScheme(t)
-	r := &ModelReconciler{Client: fake.NewClientBuilder().WithScheme(s).Build(), Scheme: s}
+	r := &ModelReconciler{Client: fake.NewClientBuilder().WithScheme(s).Build(), Scheme: s, GatewayName: testGatewayName}
 	reconcileModelOnce(t, r, "missing")
 }
 
@@ -73,6 +74,9 @@ func TestReconcile_Native(t *testing.T) {
 
 	if len(dep.OwnerReferences) == 0 || dep.OwnerReferences[0].Name != "tiny-llm" {
 		t.Error("Deployment missing owner reference to Model")
+	}
+	if ref := dep.OwnerReferences[0]; ref.BlockOwnerDeletion == nil || !*ref.BlockOwnerDeletion {
+		t.Error("Deployment owner reference to Model must block owner deletion")
 	}
 	if len(backend.OwnerReferences) == 0 || backend.OwnerReferences[0].Name != "tiny-llm" {
 		t.Error("AgentgatewayBackend missing owner reference to Model")
@@ -109,7 +113,7 @@ func TestReconcile_NativeMultipleReplicas(t *testing.T) {
 	model := testutil.NewModel("tiny-llm", testNamespace)
 	model.Spec.Replicas = 3
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(model).WithStatusSubresource(model).Build()
-	r := &ModelReconciler{Client: c, Scheme: s}
+	r := &ModelReconciler{Client: c, Scheme: s, GatewayName: testGatewayName}
 
 	reconcileModelOnce(t, r, "tiny-llm")
 
@@ -131,7 +135,7 @@ func TestReconcile_ScaleToZero(t *testing.T) {
 	model := testutil.NewModel("tiny-llm", testNamespace)
 	model.Spec.Replicas = 0
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(model).WithStatusSubresource(model).Build()
-	r := &ModelReconciler{Client: c, Scheme: s}
+	r := &ModelReconciler{Client: c, Scheme: s, GatewayName: testGatewayName}
 
 	reconcileModelOnce(t, r, "tiny-llm")
 
@@ -160,7 +164,7 @@ func TestReconcile_ScaleDownFromOne(t *testing.T) {
 	s := testutil.NewScheme(t)
 	model := testutil.NewModel("tiny-llm", testNamespace)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(model).WithStatusSubresource(model).Build()
-	r := &ModelReconciler{Client: c, Scheme: s}
+	r := &ModelReconciler{Client: c, Scheme: s, GatewayName: testGatewayName}
 
 	// Start with replicas=1 and resources created.
 	reconcileModelOnce(t, r, "tiny-llm")
@@ -207,7 +211,7 @@ func TestReconcile_ScaleToZero_KeepsForeignOwnedObject(t *testing.T) {
 	}
 
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(model, foreign).WithStatusSubresource(model).Build()
-	r := &ModelReconciler{Client: c, Scheme: s}
+	r := &ModelReconciler{Client: c, Scheme: s, GatewayName: testGatewayName}
 
 	_, err := r.Reconcile(context.Background(), ctrl.Request{
 		Name: "tiny-llm", Namespace: testNamespace,
