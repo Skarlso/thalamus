@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: Copyright 2026 SAP SE or an SAP affiliate company and cobaltcore-dev contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Cortex Agents
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review_comment:
+    types: [created]
+  schedule:
+    - cron: "0 6 * * 1"  # 06:00 UTC every Monday — bugfinder + docswriter
+  workflow_dispatch:
+    inputs:
+      feature:
+        description: "Which feature to run (bugfinder, docswriter). Leave empty to run both scheduled features."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  cortex-agents:
+    uses: cobaltcore-dev/cortex/.github/workflows/cortex-agents-entry.yaml@7d02a7a1187ff03fb7562a611691385f2ea27923
+    secrets: inherit
